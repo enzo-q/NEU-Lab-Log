@@ -13,7 +13,6 @@ https://database-1011.web.app/
 
 - **QR Check-in / Check-out** — professors scan a room QR code to log their session
 - **Live Session Timer** — active session card shows real-time duration
-- **One Room, One Professor** — a room can only be occupied by one professor at a time (not yet fixed)
 - **Admin Dashboard** — view all logs, void/restore entries, export CSV
 - **Audit Log** — every admin action is recorded with timestamps
 - **Professor Management** — whitelist emails, block/unblock access
