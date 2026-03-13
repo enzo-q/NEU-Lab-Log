@@ -47,7 +47,7 @@ neu-lab-log/
 ├── manifest.json                ← PWA manifest
 ├── sw.js                        ← Service worker (offline shell)
 ├── firebase.json                ← Firebase Hosting + Firestore rules config
-├── firestore.rules              ← Firestore security rules
+├── neu.png                      ← Official NEU logo
 ├── deploy.sh                    ← One-command deploy script
 │
 ├── css/
@@ -238,24 +238,8 @@ To test on a phone on the same Wi-Fi network, use your machine's local IP addres
 
 ## License
 
-MIT License
+**Academic Integrity & Copyright Notice**
 
-Copyright (c) 2025 NEU Lab Log Contributors
+This project was developed for academic purposes at NEU. It is intended solely for educational use, evaluation, and portfolio demonstration. 
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+This is **not** an open-source project. Unauthorized copying, adaptation, distribution, or commercial use of this codebase is strictly prohibited.
