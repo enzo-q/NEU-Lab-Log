@@ -57,6 +57,7 @@ neu-lab-log/
 │
 ├── js/
 │   ├── firebase-config.js       ← Firebase initialization (shared)
+│   ├── firebase-config-temp.js  ← Format of firebase.config only
 │   ├── scanner.js               ← QR scanner logic
 │   ├── professor-dashboard.js   ← Session view and check-out logic
 │   ├── dashboard-state.js       ← Auth guard, app state, tab switching
