@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEU Lab Log — Admin Dashboard</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Nunito+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy:  { 950:'#060F1E', 900:'#0B1E3D', 800:'#102348', 700:'#163060', 600:'#1B4F9E' },
+            gold:  { 600:'#B8891A', 500:'#D4A820', 400:'#E8BC30', 300:'#F5D060' },
+            slate: { 50:'#F4F7FB' }
+          },
+          fontFamily: {
+            display: ['Outfit', 'sans-serif'],
+            body:    ['Nunito Sans', 'sans-serif'],
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Firebase Compat SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <link rel="stylesheet" href="css/dashboard.css" />
+</head>
+<body style="background-color:#060F1E;color:white;">
+
+<!-- Auth guard overlay -->
+<div id="authGuard" class="fixed inset-0 bg-navy-950 flex items-center justify-center z-50">
+  <div class="text-center">
+    <div class="spinner mx-auto mb-4" style="width:32px;height:32px;border-width:4px"></div>
+    <p class="text-white/40 text-sm font-display">Loading dashboard…</p>
+  </div>
+</div>
+
+<!-- Sidebar overlay (mobile) -->
+<div id="sidebarOverlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<!-- ═══════════════════════════════ SIDEBAR ═══════════════════════════════ -->
+<aside class="sidebar" id="sidebar">
+  <!-- Logo -->
+  <div class="px-5 py-5 border-b border-white/07">
+    <div class="flex items-center gap-3 mb-4">
+      <img src="neu.png" alt="New Era University"
+        class="w-10 h-10 rounded-full object-cover shrink-0 border border-white/15"
+        style="background:#fff;" />
+      <div>
+        <p class="font-display font-bold text-white text-base leading-tight">NEU <span class="logo-text">Lab Log</span></p>
+        <p class="text-white/30 text-[10px] leading-tight">Admin Dashboard</p>
+      </div>
+    </div>
+    <!-- Admin badge -->
+    <div class="flex items-center gap-2.5 bg-navy-800/60 rounded-xl px-3 py-2.5 border border-white/07">
+      <img id="sidebarAvatar" src="" alt="" class="w-7 h-7 rounded-full border border-white/20 hidden shrink-0" />
+      <div class="min-w-0">
+        <p id="sidebarName" class="text-white/90 text-xs font-bold font-display leading-tight truncate"></p>
+        <p class="text-gold-400 text-[10px] font-semibold uppercase tracking-wide">Administrator</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nav links -->
+  <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+    <p class="text-white/20 text-[10px] font-bold uppercase tracking-widest px-3 mb-2">Overview</p>
+
+    <div class="nav-item active" onclick="switchTab('overview')" id="nav-overview">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+      </svg>
+      Dashboard
+    </div>
+
+    <div class="nav-item" onclick="switchTab('logs')" id="nav-logs">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+      </svg>
+      Usage Logs
+      <span id="logsCountBadge" class="ml-auto badge badge-gold hidden"></span>
+    </div>
+
+    <p class="text-white/20 text-[10px] font-bold uppercase tracking-widest px-3 mt-4 mb-2">Tools</p>
+
+    <a href="qr-generator.html"
+      class="nav-item"
+      style="text-decoration:none;"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 3.5V16M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6z"/>
+      </svg>
+      QR Generator
+    </a>
+
+    <p class="text-white/20 text-[10px] font-bold uppercase tracking-widest px-3 mt-4 mb-2">Management</p>
+
+    <div class="nav-item" onclick="switchTab('professors')" id="nav-professors">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+      </svg>
+      Professor Access
+      <span id="professorsCountBadge" class="ml-auto badge badge-gold hidden"></span>
+    </div>
+
+    <div class="nav-item" onclick="switchTab('audit')" id="nav-audit">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+      Audit Log
+      <span id="auditBadge" class="ml-auto badge badge-blue hidden"></span>
+    </div>
+  </nav>
+  <div class="px-3 py-4 border-t border-white/07">
+    <button onclick="handleSignOut()"
+      class="nav-item w-full text-left hover:text-red-400 hover:bg-red-500/10"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+      </svg>
+      Sign Out
+    </button>
+  </div>
+</aside>
+
+<!-- ═══════════════════════════════ MAIN CONTENT ═══════════════════════════════ -->
+<div class="main-content">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="h-14 px-4 sm:px-6 flex items-center gap-3">
+      <!-- Mobile hamburger -->
+      <button onclick="openSidebar()" class="lg:hidden p-1.5 text-white/50 hover:text-white">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
+
+      <div class="flex-1">
+        <h1 id="pageTitle" class="font-display font-bold text-white text-base">Dashboard</h1>
+        <p id="pageSubtitle" class="text-white/30 text-xs hidden sm:block">Laboratory Usage Overview</p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <!-- Loading indicator -->
+        <div id="topbarSpinner" class="spinner spinner-sm hidden"></div>
+        <!-- Last updated -->
+        <p id="lastUpdated" class="text-white/25 text-xs hidden sm:block"></p>
+        <!-- Refresh button -->
+        <button onclick="refreshData()" class="p-1.5 text-white/40 hover:text-white/70 rounded-lg hover:bg-white/05 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page content -->
+  <div class="px-4 sm:px-6 py-6 max-w-7xl">
+
+    <!-- ══════════ OVERVIEW TAB ══════════ -->
+    <div id="tab-overview" class="fade-in">
+
+      <!-- ── Stat Cards ─────────────────────────────────────── -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+
+        <!-- Total Logs -->
+        <div class="stat-card gold-accent">
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-9 h-9 rounded-lg bg-gold-500/15 border border-gold-500/25 flex items-center justify-center">
+              <svg class="w-4.5 h-4.5 text-gold-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:18px;height:18px">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+              </svg>
+            </div>
+            <span class="badge badge-gold">All-time</span>
+          </div>
+          <p id="statTotalLogs" class="font-display font-bold text-3xl text-white mb-0.5">—</p>
+          <p class="text-white/40 text-xs font-semibold">Total Usage Logs</p>
+          <div id="statLogsTrend" class="mt-2 text-xs text-white/30"></div>
+        </div>
+
+        <!-- Unique Professors -->
+        <div class="stat-card">
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-9 h-9 rounded-lg bg-blue-500/15 border border-blue-500/25 flex items-center justify-center">
+              <svg style="width:18px;height:18px" class="text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+            </div>
+            <span class="badge badge-blue">Unique</span>
+          </div>
+          <p id="statUniqueProfessors" class="font-display font-bold text-3xl text-white mb-0.5">—</p>
+          <p class="text-white/40 text-xs font-semibold">Professors Used Labs</p>
+        </div>
+
+        <!-- Most Used Room -->
+        <div class="stat-card">
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-9 h-9 rounded-lg bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center">
+              <svg style="width:18px;height:18px" class="text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+              </svg>
+            </div>
+            <span class="badge badge-green">Top</span>
+          </div>
+          <p id="statMostUsedRoom" class="font-display font-bold text-2xl text-white mb-0.5 truncate">—</p>
+          <p class="text-white/40 text-xs font-semibold">Most Used Room</p>
+          <p id="statMostUsedCount" class="mt-1 text-white/25 text-xs"></p>
+        </div>
+      </div>
+
+      <!-- ── Recent Activity ─────────────────────────────────── -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+        <!-- Recent Logs table (overview) -->
+        <div class="lg:col-span-2 glass-card rounded-2xl overflow-hidden">
+          <div class="px-5 py-4 border-b border-white/07 flex items-center justify-between">
+            <h3 class="font-display font-semibold text-white/90 text-sm">Recent Logs</h3>
+            <button onclick="switchTab('logs')" class="text-gold-400 text-xs font-bold font-display hover:text-gold-300 transition-colors">
+              View all →
+            </button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Professor</th>
+                  <th>Room</th>
+                  <th>Date &amp; Time</th>
+                </tr>
+              </thead>
+              <tbody id="overviewTableBody">
+                <tr><td colspan="3" class="text-center py-8 text-white/25 text-sm">
+                  <div class="spinner mx-auto mb-2"></div>Loading…
+                </td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Room usage breakdown -->
+        <div class="glass-card rounded-2xl overflow-hidden">
+          <div class="px-5 py-4 border-b border-white/07">
+            <h3 class="font-display font-semibold text-white/90 text-sm">Room Usage</h3>
+          </div>
+          <div id="roomBreakdown" class="p-4 space-y-2.5">
+            <div class="flex justify-center py-6"><div class="spinner"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ LOGS TAB ══════════ -->
+    <div id="tab-logs" class="hidden fade-in">
+      <!-- Filter bar -->
+      <div class="glass-card rounded-2xl p-4 mb-4">
+        <div class="flex flex-wrap items-center gap-2.5">
+          <!-- Quick filter pills -->
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="text-white/30 text-xs font-semibold font-display uppercase tracking-wide mr-1">Filter:</span>
+            <button class="filter-pill active" onclick="setFilter('all')"   id="pill-all">All Time</button>
+            <button class="filter-pill"        onclick="setFilter('today')" id="pill-today">Today</button>
+            <button class="filter-pill"        onclick="setFilter('week')"  id="pill-week">This Week</button>
+            <button class="filter-pill"        onclick="setFilter('month')" id="pill-month">This Month</button>
+            <button class="filter-pill"        onclick="setFilter('custom')"id="pill-custom">Custom</button>
+          </div>
+
+          <!-- Custom date range (hidden by default) -->
+          <div id="customDateRange" class="hidden flex items-center gap-2 flex-wrap">
+            <div class="w-px h-4 bg-white/10 mx-1"></div>
+            <label class="text-white/30 text-xs font-semibold">From</label>
+            <input type="date" id="dateFrom" class="date-input" />
+            <label class="text-white/30 text-xs font-semibold">To</label>
+            <input type="date"  id="dateTo"  class="date-input" />
+            <button onclick="applyCustomFilter()" class="px-3 py-1.5 rounded-lg bg-gold-500/20 hover:bg-gold-500/30 text-gold-400 text-xs font-bold font-display transition-colors">Apply</button>
+          </div>
+
+          <!-- Search -->
+          <div class="ml-auto relative">
+            <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input type="text" id="searchInput" placeholder="Search email or room…"
+              class="date-input pl-8 w-48 sm:w-64"
+              oninput="renderLogsTable()"
+            />
+          </div>
+
+          <!-- Show voided toggle -->
+          <label class="flex items-center gap-2 cursor-pointer select-none ml-1" title="Show voided (invalid) log entries">
+            <div class="relative">
+              <input type="checkbox" id="showVoidedToggle" class="sr-only" onchange="renderLogsTable()"/>
+              <div id="toggleTrack" class="w-8 h-4 rounded-full bg-white/10 border border-white/15 transition-all"></div>
+              <div id="toggleThumb" class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white/30 transition-all"></div>
+            </div>
+            <span class="text-white/35 text-xs font-semibold font-display">Show Voided</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Results count -->
+      <div class="flex items-center justify-between mb-3">
+        <p id="logsResultCount" class="text-white/30 text-xs"></p>
+        <button onclick="exportCSV()" class="flex items-center gap-1.5 text-white/40 hover:text-white/70 text-xs font-semibold transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          Export CSV
+        </button>
+      </div>
+
+      <!-- Logs table -->
+      <div class="glass-card rounded-2xl overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Professor Email</th>
+                <th>Room Number</th>
+                <th>Check-in / Check-out</th>
+                <th class="text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="logsTableBody">
+              <tr><td colspan="5" class="text-center py-10 text-white/25">
+                <div class="spinner mx-auto mb-2"></div>Loading logs…
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div id="paginationBar" class="flex items-center justify-between px-5 py-3 border-t border-white/06">
+          <button id="prevPage" onclick="changePage(-1)" class="text-xs font-bold font-display text-white/40 hover:text-white/70 transition-colors disabled:opacity-30 flex items-center gap-1" disabled>
+            ← Prev
+          </button>
+          <span id="pageInfo" class="text-white/30 text-xs font-display"></span>
+          <button id="nextPage" onclick="changePage(1)"  class="text-xs font-bold font-display text-white/40 hover:text-white/70 transition-colors disabled:opacity-30 flex items-center gap-1" disabled>
+            Next →
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ PROFESSOR ACCESS TAB ══════════ -->
+    <div id="tab-professors" class="hidden fade-in">
+
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="font-display font-bold text-white text-lg">Professor Access</h2>
+          <p class="text-white/35 text-xs mt-0.5">Only whitelisted emails can sign in. Manage access and block/unblock professors from one place.</p>
+        </div>
+        <div id="professorsSpinner" class="spinner hidden"></div>
+      </div>
+
+      <!-- Add single email -->
+      <div class="glass-card rounded-2xl p-5 mb-4">
+        <p class="font-display font-semibold text-white/80 text-sm mb-3">Add Professor Email</p>
+        <div class="flex gap-2 flex-wrap">
+          <div class="relative flex-1 min-w-[220px]">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            <input type="email" id="whitelistEmailInput"
+              placeholder="professor@neu.edu.ph"
+              class="date-input pl-9 w-full"
+              onkeydown="if(event.key==='Enter') addToWhitelist()" />
+          </div>
+          <button onclick="addToWhitelist()"
+            class="px-4 py-2 rounded-lg bg-gold-500/20 hover:bg-gold-500/30 text-gold-400 border border-gold-500/30 text-sm font-bold font-display transition-all flex items-center gap-2">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            </svg>
+            Add Email
+          </button>
+        </div>
+        <p class="text-white/25 text-xs mt-2.5 leading-relaxed">The professor can sign in immediately after being added — no further steps needed.</p>
+      </div>
+
+      <!-- Bulk add -->
+      <div class="glass-card rounded-2xl p-5 mb-4">
+        <p class="font-display font-semibold text-white/80 text-sm mb-1">Bulk Add</p>
+        <p class="text-white/30 text-xs mb-3">Paste multiple emails separated by commas or new lines.</p>
+        <textarea id="bulkEmailInput" rows="3"
+          placeholder="prof1@neu.edu.ph, prof2@neu.edu.ph&#10;prof3@neu.edu.ph"
+          class="date-input w-full resize-none leading-relaxed"
+          style="height:80px;"></textarea>
+        <button onclick="bulkAddToWhitelist()"
+          class="mt-2 px-4 py-2 rounded-lg bg-white/08 hover:bg-white/12 text-white/60 border border-white/10 text-xs font-bold font-display transition-all">
+          Add All
+        </button>
+      </div>
+
+      <!-- Unified professors table -->
+      <div id="professorsContainer" class="glass-card rounded-2xl overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-white/07 flex items-center justify-between gap-3 flex-wrap">
+          <div class="relative">
+            <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input type="text" id="profSearch" placeholder="Search professors…"
+              class="date-input pl-8 w-52" oninput="renderProfessorsTable()" />
+          </div>
+          <span id="professorsCountLabel" class="text-white/30 text-xs font-display"></span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Professor</th>
+                <th>Status</th>
+                <th>Whitelisted Since</th>
+                <th class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="professorsTableBody">
+              <tr><td colspan="4" class="text-center py-10 text-white/25">
+                <div class="spinner mx-auto mb-2"></div>Loading…
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div><!-- /tab-professors -->
+
+    <!-- ══════════ AUDIT LOG TAB ══════════ -->
+    <div id="tab-audit" class="hidden fade-in">
+
+      <!-- Header -->
+      <div class="flex items-start justify-between mb-5 gap-4 flex-wrap">
+        <div>
+          <h2 class="font-display font-bold text-white text-lg">Admin Audit Log</h2>
+          <p class="text-white/35 text-xs mt-0.5">
+            Every administrative action is recorded here permanently — voids, restores, blocks, and whitelist changes.
+          </p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <div id="auditSpinner" class="spinner hidden"></div>
+          <button onclick="exportAuditCSV()"
+            class="flex items-center gap-1.5 text-white/40 hover:text-white/70 text-xs font-semibold transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Export CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter bar -->
+      <div class="glass-card rounded-2xl p-4 mb-4">
+        <div class="flex flex-col gap-3">
+
+          <!-- Row 1: Category tabs + Search -->
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-white/25 text-[10px] font-bold uppercase tracking-widest font-display mr-0.5">View:</span>
+              <button class="cat-pill active" onclick="setAuditCategory('all')"       id="cpill-all">All</button>
+              <button class="cat-pill"        onclick="setAuditCategory('admin')"     id="cpill-admin">Admin</button>
+              <button class="cat-pill"        onclick="setAuditCategory('professor')" id="cpill-professor">Professor</button>
+            </div>
+            <!-- Search -->
+            <div class="ml-auto relative">
+              <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+              <input type="text" id="auditSearch" placeholder="Search email, room, or detail…"
+                class="date-input pl-8 w-52"
+                oninput="renderAuditLog()" />
+            </div>
+          </div>
+
+          <!-- Row 2: Admin action sub-pills (hidden by default, shown when category = admin) -->
+          <div id="adminActionPills" class="hidden flex items-center gap-1.5 flex-wrap">
+            <span class="text-white/25 text-[10px] font-bold uppercase tracking-widest font-display mr-0.5">Action:</span>
+            <button class="action-pill active" onclick="setAuditAction('all')"        id="apill-all">All</button>
+            <button class="action-pill"        onclick="setAuditAction('void_log')"   id="apill-void_log">Void</button>
+            <button class="action-pill"        onclick="setAuditAction('restore_log')"id="apill-restore_log">Restore</button>
+            <button class="action-pill"        onclick="setAuditAction('block')"      id="apill-block">Block</button>
+            <button class="action-pill"        onclick="setAuditAction('unblock')"    id="apill-unblock">Unblock</button>
+            <button class="action-pill"        onclick="setAuditAction('wl_add')"     id="apill-wl_add">WL Add</button>
+            <button class="action-pill"        onclick="setAuditAction('wl_remove')"  id="apill-wl_remove">WL Remove</button>
+          </div>
+
+          <!-- Row 3: Professor action sub-pills (hidden by default, shown when category = professor) -->
+          <div id="profActionPills" class="hidden flex items-center gap-1.5 flex-wrap">
+            <span class="text-white/25 text-[10px] font-bold uppercase tracking-widest font-display mr-0.5">Action:</span>
+            <button class="action-pill active" onclick="setAuditProfAction('all')"          id="ppill-all">All</button>
+            <button class="action-pill"        onclick="setAuditProfAction('prof_signin')"  id="ppill-prof_signin">Sign-in</button>
+            <button class="action-pill"        onclick="setAuditProfAction('prof_scan')"    id="ppill-prof_scan">QR Scan</button>
+            <button class="action-pill"        onclick="setAuditProfAction('prof_checkout')"id="ppill-prof_checkout">Check-out</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Results count + summary strip -->
+      <div class="flex items-center justify-between mb-3">
+        <p id="auditResultCount" class="text-white/30 text-xs"></p>
+      </div>
+
+      <!-- Audit timeline card -->
+      <div class="glass-card rounded-2xl overflow-hidden">
+
+        <!-- Summary stats row -->
+        <div id="auditSummaryRow"
+          class="px-5 py-3 border-b border-white/07 flex flex-wrap gap-4 text-xs hidden">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Timeline list -->
+        <div id="auditList">
+          <div class="flex items-center justify-center gap-3 py-12 text-white/30 text-sm">
+            <div class="spinner"></div> Loading audit log…
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div id="auditPaginationBar" class="flex items-center justify-between px-5 py-3 border-t border-white/06">
+          <button id="auditPrevPage" onclick="changeAuditPage(-1)"
+            class="text-xs font-bold font-display text-white/40 hover:text-white/70 transition-colors disabled:opacity-30 flex items-center gap-1" disabled>
+            ← Prev
+          </button>
+          <span id="auditPageInfo" class="text-white/30 text-xs font-display"></span>
+          <button id="auditNextPage" onclick="changeAuditPage(1)"
+            class="text-xs font-bold font-display text-white/40 hover:text-white/70 transition-colors disabled:opacity-30 flex items-center gap-1" disabled>
+            Next →
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /tab-audit -->
+
+  </div><!-- /max-w-7xl -->
+</div><!-- /main-content -->
+
+<!-- ══════════════════════ VOID REASON MODAL ══════════════════════ -->
+<div id="voidModal" style="display:none;position:fixed;inset:0;z-index:60;align-items:center;justify-content:center;padding:16px;"
+  class="bg-black/70 backdrop-blur-sm"
+  onclick="if(event.target===this) closeVoidModal()">
+  <div class="bg-[#0B1E3D] border border-white/10 rounded-2xl shadow-2xl w-full max-w-md" style="animation:fadeIn 0.2s ease">
+    <!-- Header -->
+    <div class="px-6 py-5 border-b border-white/08 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-red-500/15 border border-red-500/25 flex items-center justify-center shrink-0">
+          <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="font-display font-bold text-white text-base">Void Log Entry</h3>
+          <p class="text-white/35 text-xs mt-0.5">Record preserved — excluded from statistics &amp; exports.</p>
+        </div>
+      </div>
+      <!-- Close X -->
+      <button onclick="closeVoidModal()" aria-label="Close"
+        class="p-1.5 rounded-lg text-white/30 hover:text-white/70 hover:bg-white/05 transition-colors shrink-0">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <!-- Body -->
+    <div class="px-6 py-5">
+      <label class="text-white/50 text-xs font-bold font-display uppercase tracking-wider block mb-2">
+        Reason for voiding <span class="text-white/25 normal-case font-normal tracking-normal">(optional)</span>
+      </label>
+      <textarea id="voidReasonInput" rows="3"
+        placeholder="e.g. Duplicate entry, incorrect room scan, data entry error…"
+        class="date-input w-full resize-none leading-relaxed"
+        style="height:82px;"
+        onkeydown="if(event.key==='Enter'&&event.ctrlKey) confirmVoidLog()"
+      ></textarea>
+      <p class="text-white/20 text-xs mt-2">Tip: Press Ctrl+Enter to confirm quickly. Click outside or press Esc to cancel.</p>
+    </div>
+    <!-- Footer -->
+    <div class="px-6 pb-5 flex justify-end gap-2.5">
+      <button onclick="closeVoidModal()"
+        class="px-4 py-2 rounded-xl text-xs font-bold font-display text-white/50 hover:text-white/80 border border-white/10 hover:bg-white/05 transition-all">
+        Cancel
+      </button>
+      <button onclick="confirmVoidLog()"
+        class="px-4 py-2 rounded-xl text-xs font-bold font-display bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 hover:border-red-500/50 transition-all flex items-center gap-2">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+        </svg>
+        Void Entry
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div id="toast">
+  <div id="toastContent" class="rounded-xl px-4 py-3 text-sm flex items-center gap-2.5 shadow-2xl min-w-[220px]"></div>
+</div>
+
+
+  <!-- JS modules — load order: utils → state → overview → logs → professors → audit -->
+  <script src="js/firebase-config.js"></script>
+  <script src="js/dashboard-utils.js"></script>
+  <script src="js/dashboard-state.js"></script>
+  <script src="js/dashboard-overview.js"></script>
+  <script src="js/dashboard-logs.js"></script>
+  <script src="js/dashboard-professors.js"></script>
+  <script src="js/dashboard-audit.js"></script>
+</body>
+</html>

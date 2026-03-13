@@ -1,0 +1,41 @@
+{
+  "name": "NEU Laboratory Log",
+  "short_name": "NEU Lab Log",
+  "description": "NEU Laboratory Usage Logger — Professor QR Scanner & Session Tracker",
+  "start_url": "/scanner.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#060F1E",
+  "theme_color": "#0B1E3D",
+  "lang": "en",
+  "categories": ["education", "utilities"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Scan Room QR",
+      "short_name": "Scan",
+      "url": "/scanner.html",
+      "description": "Open the QR room scanner"
+    },
+    {
+      "name": "My Sessions",
+      "short_name": "Sessions",
+      "url": "/professor-dashboard.html",
+      "description": "View today's sessions and check out"
+    }
+  ]
+}

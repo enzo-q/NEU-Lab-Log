@@ -1,0 +1,128 @@
+    * { font-family: 'Nunito Sans', sans-serif; }
+    h1, h2, h3, .font-display { font-family: 'Outfit', sans-serif; }
+
+    html { background-color: #060F1E; }
+    body {
+      background: #060F1E;
+      background-image:
+        radial-gradient(ellipse 600px 400px at 80% 0%, rgba(27,79,158,0.18) 0%, transparent 70%),
+        radial-gradient(ellipse 400px 300px at 10% 90%, rgba(212,168,32,0.07) 0%, transparent 70%),
+        radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0);
+      background-size: 100% 100%, 100% 100%, 28px 28px;
+      min-height: 100vh;
+    }
+
+    /* Top nav */
+    .topnav {
+      background: rgba(11,30,61,0.8);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+
+    /* Scanner viewport */
+    #qr-reader {
+      width: 100% !important;
+      border-radius: 16px !important;
+      overflow: hidden !important;
+    }
+    /* Override html5-qrcode default styles */
+    #qr-reader > section { padding: 0 !important; }
+    #qr-reader video { border-radius: 12px !important; width: 100% !important; }
+    #qr-reader__dashboard { display: none !important; } /* hide default UI */
+
+    /* Scanning frame overlay */
+    .scan-frame {
+      position: absolute;
+      width: 220px; height: 220px;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 20;
+    }
+    .scan-corner {
+      position: absolute;
+      width: 28px; height: 28px;
+      border-color: #D4A820;
+      border-style: solid;
+      border-width: 0;
+    }
+    .scan-corner.tl { top: 0; left: 0;  border-top-width: 3px; border-left-width: 3px; border-radius: 4px 0 0 0; }
+    .scan-corner.tr { top: 0; right: 0; border-top-width: 3px; border-right-width: 3px; border-radius: 0 4px 0 0; }
+    .scan-corner.bl { bottom: 0; left: 0;  border-bottom-width: 3px; border-left-width: 3px; border-radius: 0 0 0 4px; }
+    .scan-corner.br { bottom: 0; right: 0; border-bottom-width: 3px; border-right-width: 3px; border-radius: 0 0 4px 0; }
+
+    .scan-line {
+      position: absolute;
+      left: 10px; right: 10px; height: 2px;
+      background: linear-gradient(90deg, transparent, #D4A820, transparent);
+      top: 10px;
+      animation: scanMove 2.5s ease-in-out infinite;
+      border-radius: 2px;
+    }
+    @keyframes scanMove {
+      0%   { top: 10px; opacity: 0; }
+      10%  { opacity: 1; }
+      90%  { opacity: 1; }
+      100% { top: calc(100% - 12px); opacity: 0; }
+    }
+
+    /* Success state */
+    .success-state { animation: successBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    @keyframes successBounce {
+      from { opacity: 0; transform: scale(0.7); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    /* Status badge pulse */
+    .live-pulse {
+      animation: pulseDot 2s ease-in-out infinite;
+    }
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    /* Card styles */
+    .glass-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(20px);
+    }
+
+    /* Spinner */
+    .spinner { width:24px; height:24px; border:3px solid rgba(255,255,255,0.2); border-top-color:#D4A820; border-radius:50%; animation:spin .7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* Result card slide-up */
+    .slide-up { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+    @keyframes slideUp {
+      from { opacity:0; transform:translateY(20px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    /* Gold shimmer */
+    .logo-text {
+      background: linear-gradient(90deg, #D4A820, #F5D060, #D4A820);
+      background-size: 200% auto;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmer 3s linear infinite;
+    }
+    @keyframes shimmer { to { background-position:200% center; } }
+
+    /* Confetti burst (CSS only) */
+    .confetti-piece {
+      position:absolute; width:8px; height:8px;
+      border-radius:2px;
+      animation: confettiFly 1.2s ease-out forwards;
+    }
+    @keyframes confettiFly {
+      0%   { opacity:1; transform:translate(0,0) rotate(0deg); }
+      100% { opacity:0; transform:var(--end-pos) rotate(720deg); }
+    }
+
+    /* Cooldown progress */
+    .cooldown-bar { transition: width 1s linear; }
+
+    /* Camera placeholder */
+    #cameraPlaceholder { transition: all 0.3s; }

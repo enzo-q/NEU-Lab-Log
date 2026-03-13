@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEU Lab Log — Sign In</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#060F1E" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="NEU Lab Log" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Nunito+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy:  { 950:'#060F1E', 900:'#0B1E3D', 800:'#102348', 700:'#163060', 600:'#1B4F9E' },
+            gold:  { 600:'#B8891A', 500:'#D4A820', 400:'#E8BC30', 300:'#F5D060' },
+            slate: { 50:'#F4F7FB' }
+          },
+          fontFamily: {
+            display: ['Outfit', 'sans-serif'],
+            body:    ['Nunito Sans', 'sans-serif'],
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Firebase Compat SDK (no bundler needed) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    * { font-family: 'Nunito Sans', sans-serif; }
+    h1, h2, h3, .font-display { font-family: 'Outfit', sans-serif; }
+
+    /* Animated gradient background */
+    .bg-animated {
+      background: linear-gradient(135deg, #060F1E 0%, #0B1E3D 35%, #102348 60%, #163060 100%);
+      background-size: 400% 400%;
+      animation: gradientShift 12s ease infinite;
+    }
+    @keyframes gradientShift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* Floating orbs */
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.12;
+      animation: float 8s ease-in-out infinite;
+    }
+    .orb-1 { width: 400px; height: 400px; background: #1B4F9E; top: -10%; left: -10%; animation-delay: 0s; }
+    .orb-2 { width: 300px; height: 300px; background: #D4A820; bottom: 10%; right: -5%; animation-delay: 3s; }
+    .orb-3 { width: 250px; height: 250px; background: #1B4F9E; bottom: 30%; left: 20%; animation-delay: 6s; }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) scale(1); }
+      50%       { transform: translateY(-30px) scale(1.05); }
+    }
+
+    /* Card entrance */
+    .card-enter {
+      animation: cardIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(30px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Google button hover effect */
+    .btn-google {
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-google::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0);
+      transition: background 0.2s;
+    }
+    .btn-google:hover::after { background: rgba(255,255,255,0.08); }
+    .btn-google:active { transform: scale(0.98); }
+    .btn-google:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    /* Alert animations */
+    .alert-slide {
+      animation: alertIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes alertIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Spinner */
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2.5px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Gold shimmer on logo */
+    .logo-text {
+      background: linear-gradient(90deg, #D4A820 0%, #F5D060 50%, #D4A820 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmer 3s linear infinite;
+    }
+    @keyframes shimmer { to { background-position: 200% center; } }
+
+    /* Noise overlay */
+    .noise::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      opacity: 0.4;
+      z-index: 0;
+    }
+
+    /* Gold accent line on card */
+    .gold-line { background: linear-gradient(90deg, transparent, #D4A820, transparent); }
+
+    /* Dots pattern */
+    .dots-pattern {
+      background-image: radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+  </style>
+</head>
+
+<body class="bg-animated noise min-h-screen flex items-center justify-center p-4 relative overflow-hidden dots-pattern" style="background-color:#060F1E;color:white;">
+
+  <!-- Ambient orbs -->
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+
+  <!-- Login Card -->
+  <div class="relative z-10 w-full max-w-md card-enter">
+    <!-- Card -->
+    <div class="bg-white/5 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
+      <!-- Gold accent line -->
+      <div class="gold-line h-[2px] w-full"></div>
+
+      <div class="px-8 pt-10 pb-10">
+
+        <!-- Logo / Header -->
+        <div class="text-center mb-8">
+          <!-- Icon -->
+          <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-navy-700/60 border border-gold-500/30 mb-4 shadow-lg">
+            <svg class="w-8 h-8" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- QR/Scanner icon -->
+              <rect x="4" y="4" width="10" height="10" rx="1.5" stroke="#D4A820" stroke-width="1.8" fill="none"/>
+              <rect x="6.5" y="6.5" width="5" height="5" rx="0.5" fill="#D4A820"/>
+              <rect x="18" y="4" width="10" height="10" rx="1.5" stroke="#D4A820" stroke-width="1.8" fill="none"/>
+              <rect x="20.5" y="6.5" width="5" height="5" rx="0.5" fill="#D4A820"/>
+              <rect x="4" y="18" width="10" height="10" rx="1.5" stroke="#D4A820" stroke-width="1.8" fill="none"/>
+              <rect x="6.5" y="20.5" width="5" height="5" rx="0.5" fill="#D4A820"/>
+              <line x1="18" y1="18" x2="18" y2="21" stroke="#D4A820" stroke-width="1.8" stroke-linecap="round"/>
+              <line x1="21" y1="18" x2="21" y2="18" stroke="#D4A820" stroke-width="2.2" stroke-linecap="round"/>
+              <line x1="24" y1="18" x2="24" y2="21" stroke="#D4A820" stroke-width="1.8" stroke-linecap="round"/>
+              <line x1="28" y1="18" x2="28" y2="21" stroke="#D4A820" stroke-width="1.8" stroke-linecap="round"/>
+              <line x1="18" y1="24" x2="21" y2="24" stroke="#D4A820" stroke-width="1.8" stroke-linecap="round"/>
+              <line x1="24" y1="24" x2="24" y2="28" stroke="#D4A820" stroke-width="1.8" stroke-linecap="round"/>
+              <line x1="28" y1="24" x2="28" y2="28" stroke="#D4A820" stroke-width="1.8" stroke-linecap="round"/>
+              <line x1="18" y1="28" x2="21" y2="28" stroke="#D4A820" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </div>
+
+          <h1 class="font-display text-3xl font-bold text-white tracking-tight leading-tight">
+            NEU <span class="logo-text">Lab Log</span>
+          </h1>
+          <p class="text-white/40 text-sm mt-1.5 font-body tracking-wide">
+            Laboratory Usage Monitoring System
+          </p>
+
+          <!-- Separator -->
+          <div class="flex items-center gap-3 mt-5">
+            <div class="flex-1 h-px bg-white/10"></div>
+            <span class="text-white/20 text-xs tracking-widest uppercase font-display">New Era University</span>
+            <div class="flex-1 h-px bg-white/10"></div>
+          </div>
+        </div>
+
+        <!-- Alert box (hidden by default) -->
+        <div id="alertBox" class="hidden mb-5 rounded-xl px-4 py-3 text-sm flex items-start gap-2.5 alert-slide">
+          <svg id="alertIcon" class="w-4 h-4 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"></svg>
+          <span id="alertMsg"></span>
+        </div>
+
+        <!-- Sign In Content -->
+        <div id="signInSection" class="space-y-4">
+          <p class="text-white/50 text-sm text-center leading-relaxed">
+            Sign in with your institutional Google account to access the laboratory logging system.
+          </p>
+
+          <!-- Google Sign-In Button -->
+          <button
+            id="signInBtn"
+            class="btn-google w-full flex items-center justify-center gap-3 bg-white/10 hover:bg-white/15 border border-white/15 hover:border-white/25 text-white font-display font-semibold text-sm rounded-xl px-5 py-3.5 shadow-lg"
+          >
+            <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            <span id="btnLabel">Continue with Google</span>
+            <div id="btnSpinner" class="spinner hidden"></div>
+          </button>
+
+          <!-- Domain notice -->
+          <div class="flex items-center gap-2 bg-gold-500/10 border border-gold-500/20 rounded-xl px-4 py-2.5">
+            <svg class="w-3.5 h-3.5 text-gold-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+            </svg>
+            <p class="text-gold-300 text-xs leading-relaxed">
+              Access restricted to <strong class="text-gold-400">@neu.edu.ph</strong> institutional emails only. Your email must be pre-registered by an administrator.
+            </p>
+          </div>
+        </div>
+
+        <!-- Footer note -->
+        <p class="text-white/20 text-xs text-center mt-8 leading-relaxed">
+          For account issues, contact your <br/>system administrator.
+        </p>
+      </div>
+    </div>
+
+    <!-- Sub-label -->
+    <p class="text-center text-white/20 text-xs mt-4 tracking-wide">
+      © 2026 New Era University · CICS Department
+    </p>
+  </div>
+
+  <!-- Firebase + Config -->
+  <script src="js/firebase-config.js"></script>
+
+  <!-- Sprint 1: Auth Logic -->
+  <script>
+    "use strict";
+
+    const ALLOWED_DOMAIN = "@neu.edu.ph";
+
+    const signInBtn  = document.getElementById("signInBtn");
+    const btnLabel   = document.getElementById("btnLabel");
+    const btnSpinner = document.getElementById("btnSpinner");
+    const alertBox   = document.getElementById("alertBox");
+    const alertMsg   = document.getElementById("alertMsg");
+    const alertIcon  = document.getElementById("alertIcon");
+
+    /* ── Helpers ───────────────────────────────────────────────── */
+    function setLoading(on) {
+      signInBtn.disabled = on;
+      btnLabel.textContent = on ? "Signing in…" : "Continue with Google";
+      btnSpinner.classList.toggle("hidden", !on);
+    }
+
+    function showAlert(type, message) {
+      alertBox.classList.remove("hidden");
+      alertMsg.textContent = message;
+      if (type === "error") {
+        alertBox.className = "mb-5 rounded-xl px-4 py-3 text-sm flex items-start gap-2.5 alert-slide bg-red-500/15 border border-red-500/30 text-red-300";
+        alertIcon.innerHTML = `<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>`;
+      } else if (type === "warning") {
+        alertBox.className = "mb-5 rounded-xl px-4 py-3 text-sm flex items-start gap-2.5 alert-slide bg-amber-500/15 border border-amber-500/30 text-amber-300";
+        alertIcon.innerHTML = `<path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>`;
+      } else {
+        alertBox.className = "mb-5 rounded-xl px-4 py-3 text-sm flex items-start gap-2.5 alert-slide bg-green-500/15 border border-green-500/30 text-green-300";
+        alertIcon.innerHTML = `<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>`;
+      }
+    }
+
+    function hideAlert() { alertBox.classList.add("hidden"); }
+
+    /* ══════════════════════════════════════════════════════════════
+       AUTH APPROACH — signInWithPopup for all platforms
+       ──────────────────────────────────────────────────
+       All platforms (iOS, Android, Desktop) use signInWithPopup.
+
+       Why popup everywhere:
+         • Android: popup works fine; redirect loses sessionStorage
+           if the tab is backgrounded mid-redirect.
+         • Desktop: popup has always worked correctly.
+         • iOS: previously used redirect because the old authDomain
+           (firebaseapp.com) was treated as third-party by Safari ITP,
+           causing popup's sessionStorage to be cleared. Now that
+           authDomain = "database-1011.web.app" (same origin as the
+           app), the popup handler is first-party and ITP-safe.
+           Redirect is unreliable on iOS when adding a new account —
+           Google's multi-hop sign-in flow clears Safari's stored
+           redirect state before it returns to the app.
+
+       Returning-user flow: onAuthStateChanged handles all platforms.
+       Guard (_routingInProgress) prevents double-routing when both
+       the popup result handler and onAuthStateChanged fire together.
+    ══════════════════════════════════════════════════════════════ */
+
+    // Set true only when a sign-in is actively resolving — prevents
+    // onAuthStateChanged from calling routeUser() a second time while
+    // the popup result handler is already inside routeUser().
+    let _routingInProgress = false;
+
+    /* ── Returning-user routing (all platforms) ──────────────────── */
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) return;
+      // Skip if a popup sign-in is in progress — that handler owns routing
+      if (signInBtn.disabled || _routingInProgress) return;
+
+      if (!user.email.endsWith(ALLOWED_DOMAIN)) {
+        await auth.signOut(); return;
+      }
+
+      _routingInProgress = true;
+      await routeUser(user);
+    });
+
+    /* ── Whitelist-Gated Routing ───────────────────────────────── */
+    async function routeUser(user) {
+      try {
+        // Force-refresh token so Firestore accepts it immediately
+        await user.getIdToken(true);
+
+        const userRef = db.collection("users").doc(user.uid);
+        const userDoc = await userRef.get();
+
+        // ── Returning user ──────────────────────────────────────
+        if (userDoc.exists) {
+          const data = userDoc.data();
+          if (data.isBlocked === true) {
+            showAlert("error", "Your account has been blocked by an administrator. Please contact support.");
+            await auth.signOut(); setLoading(false); return;
+          }
+          if (data.role === "admin") { window.location.href = "dashboard.html"; return; }
+          if (data.role === "professor") {
+            // Re-check whitelist on every sign-in — removal must revoke access immediately.
+            // Admins are exempt (they are never on the professor whitelist).
+            const emailKey = user.email.toLowerCase().replace(/\./g, "_");
+            const wlDoc    = await db.collection("allowedEmails").doc(emailKey).get();
+            if (!wlDoc.exists) {
+              showAlert("error", "Your access has been removed. Contact your administrator to be re-added.");
+              await auth.signOut(); setLoading(false); return;
+            }
+            // Log sign-in activity — awaited so the write completes before redirect
+            try {
+              await db.collection("auditLogs").add({
+                action: "prof_signin", professorEmail: user.email, professorUid: user.uid,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+              });
+            } catch(_) {}
+            window.location.href = "scanner.html"; return;
+          }
+          showAlert("warning", "Unrecognised account role. Please contact an administrator.");
+          await auth.signOut(); setLoading(false); return;
+        }
+
+        // ── Brand-new user: whitelist check ─────────────────────
+        const emailKey     = user.email.toLowerCase().replace(/\./g, "_");
+        const whitelistDoc = await db.collection("allowedEmails").doc(emailKey).get();
+
+        if (!whitelistDoc.exists) {
+          showAlert("error", "Your email is not registered in the system. Contact your administrator to be added.");
+          await auth.signOut(); setLoading(false); return;
+        }
+
+        // ── Whitelisted → provision user doc + go to scanner ────
+        await userRef.set({
+          uid:         user.uid,
+          email:       user.email,
+          displayName: user.displayName || "",
+          photoURL:    user.photoURL    || "",
+          role:        "professor",
+          status:      "approved",
+          isBlocked:   false,
+          createdAt:   firebase.firestore.FieldValue.serverTimestamp(),
+        });
+
+        // Log sign-in activity — awaited so the write completes before redirect
+        try {
+          await db.collection("auditLogs").add({
+            action: "prof_signin", professorEmail: user.email, professorUid: user.uid,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+        } catch(_) {}
+
+        window.location.href = "scanner.html";
+
+      } catch (err) {
+        console.error("Routing error:", err);
+        showAlert("error", "A server error occurred. Please try again.");
+        setLoading(false);
+      }
+    }
+
+    /* ── Sign-In Button ────────────────────────────────────────── */
+    signInBtn.addEventListener("click", async () => {
+      hideAlert();
+      setLoading(true);
+
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
+
+      // signInWithPopup for all platforms — see AUTH APPROACH comment above.
+      // Must be called with no awaits before it so the browser treats it
+      // as a direct user-gesture (required for popup permission on mobile).
+      try {
+        const result = await auth.signInWithPopup(provider);
+        const user   = result.user;
+
+        if (!user.email.endsWith(ALLOWED_DOMAIN)) {
+          await auth.signOut();
+          showAlert("error", "Access restricted to NEU institutional emails only.");
+          setLoading(false); return;
+        }
+
+        // Claim the guard before any await so onAuthStateChanged (which
+        // fires right after popup resolves) sees it and skips routing.
+        _routingInProgress = true;
+        await routeUser(user);
+
+      } catch (err) {
+        setLoading(false);
+        _routingInProgress = false;
+        if (err.code === "auth/popup-closed-by-user" ||
+            err.code === "auth/cancelled-popup-request") return;
+        if (err.code === "auth/network-request-failed") {
+          showAlert("error", "Network error. Please check your connection and try again."); return;
+        }
+        if (err.code === "auth/popup-blocked") {
+          showAlert("error", "Pop-up was blocked. Please open the app directly in Chrome."); return;
+        }
+        console.error("Sign-in error:", err);
+        showAlert("error", "Sign-in failed. Please try again.");
+      }
+    });
+  </script>
+
+<!-- ── In-app browser overlay ───────────────────────────────────────────── -->
+<div id="iabOverlay" style="
+  display:none; position:fixed; inset:0; z-index:9999;
+  background:rgba(6,15,30,0.97); backdrop-filter:blur(8px);
+  flex-direction:column; align-items:center; justify-content:center;
+  padding:32px; text-align:center; font-family:'Nunito Sans',sans-serif;
+">
+  <!-- Icon -->
+  <div style="width:64px;height:64px;border-radius:16px;background:rgba(212,168,32,0.12);border:1px solid rgba(212,168,32,0.3);display:flex;align-items:center;justify-content:center;margin-bottom:24px;">
+    <svg width="32" height="32" fill="none" stroke="#D4A820" stroke-width="1.8" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+    </svg>
+  </div>
+
+  <h2 style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:700;color:white;margin:0 0 10px;">Open in Chrome or Safari</h2>
+  <p style="color:rgba(255,255,255,0.5);font-size:14px;line-height:1.6;max-width:300px;margin:0 0 28px;">
+    Google sign-in doesn't work inside Messenger, Gmail, or other apps.<br><br>
+    Please open this page in <strong style="color:rgba(255,255,255,0.8);">Chrome</strong> (Android) or <strong style="color:rgba(255,255,255,0.8);">Safari</strong> (iPhone).
+  </p>
+
+  <!-- Open in Chrome button (Android) -->
+  <button id="openChromeBtn" onclick="openInChrome()" style="
+    display:none; width:100%; max-width:300px; padding:14px;
+    background:rgba(212,168,32,0.15); border:1px solid rgba(212,168,32,0.4);
+    border-radius:12px; color:#E8BC30; font-family:'Outfit',sans-serif;
+    font-size:14px; font-weight:700; cursor:pointer; margin-bottom:12px;
+  ">
+    Open in Chrome
+  </button>
+
+  <!-- Manual instructions -->
+  <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px;max-width:300px;width:100%;">
+    <p style="color:rgba(255,255,255,0.4);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 10px;font-family:'Outfit',sans-serif;">How to open manually</p>
+    <p id="iabInstructions" style="color:rgba(255,255,255,0.55);font-size:13px;line-height:1.6;margin:0;"></p>
+  </div>
+</div>
+
+<script>
+(function() {
+  const ua = navigator.userAgent || "";
+
+  // Known in-app browser UA tokens — covers Messenger/Facebook (FBIOS, FBAN),
+  // Instagram, Line, TikTok, Snapchat, LinkedIn, WeChat, Gmail (GSA), etc.
+  const knownIAB = /FBAN|FBAV|FBIOS|FB_IAB|FB4A|FBDV|Instagram|Line\/|TwitterAndroid|TiktokBrowser|SnapchatAndroid|LinkedInApp|MicroMessenger|GSA\/|musical_ly|BytedanceWebview/i.test(ua);
+
+  // Android WebView signal — present in Messenger, Gmail, etc. on Android.
+  // Real Chrome on Android does NOT include "wv".
+  const androidWebView = /Android/.test(ua) && /wv/.test(ua);
+
+  const isIOS     = /iPhone|iPad|iPod/i.test(ua);
+  const isAndroid = /Android/i.test(ua);
+
+  // NOTE: We intentionally do NOT do broad iOS detection (e.g. checking for
+  // missing Version/) because Chrome on iOS (CriOS) also lacks Version/ and
+  // would be incorrectly blocked. knownIAB already catches iOS Messenger
+  // via FBIOS/FBAN/FBDV tokens, which is sufficient.
+  const isInAppBrowser = knownIAB || androidWebView;
+
+  if (!isInAppBrowser) return;
+
+  const overlay   = document.getElementById("iabOverlay");
+  const btn       = document.getElementById("openChromeBtn");
+  const instrEl   = document.getElementById("iabInstructions");
+
+  overlay.style.display = "flex";
+
+  if (isAndroid) {
+    btn.style.display = "block";
+    instrEl.textContent = "Or tap the ⋮ menu (top-right) and choose \"Open in Chrome\".";
+  } else if (isIOS) {
+    instrEl.textContent = "Tap the ⋯ or share icon and choose \"Open in Safari\" or \"Open in Browser\".";
+  } else {
+    instrEl.textContent = "Copy the URL from the address bar and paste it into Chrome or Safari.";
+  }
+
+  window.openInChrome = function() {
+    const url = window.location.href;
+    // Try intent:// scheme first (opens Chrome directly on Android)
+    window.location.href = "intent://" + url.replace(/^https?:\/\//, "") + "#Intent;scheme=https;package=com.android.chrome;end";
+    // Fallback after short delay — opens default browser
+    setTimeout(() => { window.location.href = url; }, 1500);
+  };
+})();
+</script>
+</body>
+</html>

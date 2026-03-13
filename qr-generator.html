@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QR Generator — NEU Lab Log</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <style>
+    body { background-color: #060F1E; color: white; font-family: 'Nunito Sans', sans-serif; }
+    .font-display { font-family: 'Outfit', sans-serif; }
+
+    .glass-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(12px);
+    }
+
+    .input-field {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: white;
+      font-size: 14px;
+      font-family: 'Nunito Sans', sans-serif;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .input-field:focus { border-color: rgba(212,168,32,0.5); }
+    .input-field::placeholder { color: rgba(255,255,255,0.25); }
+
+    .btn-primary {
+      background: rgba(212,168,32,0.15);
+      border: 1px solid rgba(212,168,32,0.35);
+      color: #D4A820;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      border-radius: 10px;
+      padding: 10px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary:hover { background: rgba(212,168,32,0.25); }
+
+    .btn-ghost {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.10);
+      color: rgba(255,255,255,0.55);
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.09); color: white; }
+
+    /* ── QR card (screen view) ─────────────────────── */
+    .qr-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      position: relative;
+      transition: border-color 0.2s;
+    }
+    .qr-card:hover { border-color: rgba(212,168,32,0.3); }
+
+    .qr-card .qr-box { background: white; border-radius: 10px; padding: 12px; }
+    .qr-card .room-label {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+      color: white;
+      text-align: center;
+    }
+    .qr-card .room-sublabel {
+      font-size: 11px;
+      color: rgba(255,255,255,0.3);
+      text-align: center;
+      margin-top: -8px;
+    }
+    .remove-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      background: rgba(239,68,68,0.12);
+      border: 1px solid rgba(239,68,68,0.25);
+      color: rgba(239,68,68,0.7);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: all 0.15s;
+    }
+    .remove-btn:hover { background: rgba(239,68,68,0.25); color: #f87171; }
+
+    /* ── Print styles ──────────────────────────────── */
+    @media print {
+      @page { size: A4; margin: 15mm; }
+
+      body { background: white !important; color: black !important; }
+
+      .no-print { display: none !important; }
+
+      #printArea {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0;
+        page-break-inside: avoid;
+      }
+
+      .print-card {
+        display: flex !important;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        border: 1px solid #ddd;
+        page-break-inside: avoid;
+        break-inside: avoid;
+        min-height: 160mm;
+      }
+
+      .print-card .print-school {
+        font-family: 'Outfit', sans-serif;
+        font-weight: 800;
+        font-size: 13pt;
+        color: #0a1628;
+        margin-bottom: 4px;
+        text-align: center;
+      }
+
+      .print-card .print-system {
+        font-size: 8pt;
+        color: #888;
+        text-align: center;
+        margin-bottom: 16px;
+      }
+
+      .print-card .print-qr {
+        margin-bottom: 16px;
+        border: 1px solid #eee;
+        padding: 8px;
+        border-radius: 6px;
+      }
+
+      .print-card .print-room {
+        font-family: 'Outfit', sans-serif;
+        font-weight: 800;
+        font-size: 22pt;
+        color: #0a1628;
+        text-align: center;
+        margin-bottom: 4px;
+      }
+
+      .print-card .print-instruction {
+        font-size: 8pt;
+        color: #999;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body style="background-color:#060F1E; color:white; min-height:100vh;">
+
+  <!-- ── Top bar ────────────────────────────────────────── -->
+  <div class="no-print border-b border-white/07" style="background:rgba(6,15,30,0.95); position:sticky; top:0; z-index:50;">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
+      <a href="dashboard.html" class="flex items-center gap-2 text-white/40 hover:text-white/80 transition-colors text-sm">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Dashboard
+      </a>
+      <span class="text-white/15 text-lg">|</span>
+      <span class="font-display font-bold text-white text-sm">QR Code Generator</span>
+      <div class="ml-auto flex items-center gap-2">
+        <button onclick="printAll()" id="printBtn"
+          class="btn-primary flex items-center gap-2 hidden">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+          </svg>
+          Print All QR Codes
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Main content ───────────────────────────────────── -->
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+
+    <!-- Header -->
+    <div class="no-print mb-8">
+      <h1 class="font-display font-bold text-white text-2xl mb-1">Room QR Codes</h1>
+      <p class="text-white/40 text-sm">Generate and print QR codes for each room. Professors scan these to log their usage.</p>
+    </div>
+
+    <!-- Input area -->
+    <div class="no-print glass-card rounded-2xl p-6 mb-6">
+      <p class="font-display font-semibold text-white/80 text-sm mb-4">Add Rooms</p>
+
+      <!-- Single room input -->
+      <div class="flex gap-2 mb-4 flex-wrap">
+        <input type="text" id="singleRoomInput"
+          placeholder="e.g. M101"
+          class="input-field flex-1 min-w-[200px]"
+          onkeydown="if(event.key==='Enter') addSingleRoom()"
+        />
+        <button onclick="addSingleRoom()" class="btn-primary flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+          </svg>
+          Add Room
+        </button>
+      </div>
+
+      <!-- Divider -->
+      <div class="flex items-center gap-3 my-4">
+        <div class="flex-1 h-px bg-white/08"></div>
+        <span class="text-white/25 text-xs">or add multiple at once</span>
+        <div class="flex-1 h-px bg-white/08"></div>
+      </div>
+
+      <!-- Bulk input -->
+      <div class="space-y-3">
+        <textarea id="bulkRoomInput" rows="4"
+          placeholder="M101&#10;M102&#10;A234&#10;B235&#10;..."
+          class="input-field w-full resize-none leading-relaxed"
+          style="height:100px;"
+        ></textarea>
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <p class="text-white/25 text-xs">One room per line. Names are used exactly as typed — they must match what professors will scan.</p>
+          <button onclick="addBulkRooms()" class="btn-ghost flex items-center gap-2">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h7"/>
+            </svg>
+            Add All
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="emptyState" class="no-print glass-card rounded-2xl p-12 text-center">
+      <div class="w-14 h-14 rounded-2xl bg-white/05 border border-white/10 flex items-center justify-center mx-auto mb-4">
+        <svg class="w-7 h-7 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 3.5V16M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6z"/>
+        </svg>
+      </div>
+      <p class="font-display font-semibold text-white/30 text-sm">No rooms added yet</p>
+      <p class="text-white/20 text-xs mt-1">Add room names above to generate QR codes.</p>
+    </div>
+
+    <!-- QR grid (screen) -->
+    <div id="qrGrid" class="no-print grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 hidden"></div>
+
+    <!-- Print area (hidden on screen, visible on print) -->
+    <div id="printArea" style="display:none;"></div>
+
+  </div>
+
+  <!-- ── Toast ─────────────────────────────────────────── -->
+  <div id="toast" class="no-print fixed bottom-6 right-6 z-50 hidden">
+    <div id="toastInner" class="glass-card rounded-xl px-4 py-3 text-sm font-semibold flex items-center gap-2 shadow-xl border"></div>
+  </div>
+
+  <script>
+    "use strict";
+
+    let rooms = []; // array of room name strings
+    let qrInstances = {}; // { roomName: QRCode instance }
+
+    function showToast(type, msg) {
+      const el    = document.getElementById("toast");
+      const inner = document.getElementById("toastInner");
+      const colors = {
+        success: "bg-green-500/15 border-green-500/30 text-green-300",
+        error:   "bg-red-500/15 border-red-500/30 text-red-300",
+        warning: "bg-amber-500/15 border-amber-500/30 text-amber-300",
+      };
+      inner.className = `glass-card rounded-xl px-4 py-3 text-sm font-semibold flex items-center gap-2 shadow-xl border ${colors[type] || colors.success}`;
+      inner.textContent = msg;
+      el.classList.remove("hidden");
+      setTimeout(() => el.classList.add("hidden"), 3000);
+    }
+
+    /* ── Add single room ──────────────────────────────── */
+    function addSingleRoom() {
+      const input = document.getElementById("singleRoomInput");
+      const name  = input.value.trim();
+      if (!name) { showToast("warning", "Please enter a room name."); return; }
+      if (rooms.includes(name)) { showToast("warning", `"${name}" is already in the list.`); return; }
+      rooms.push(name);
+      input.value = "";
+      renderQRGrid();
+      showToast("success", `"${name}" added.`);
+    }
+
+    /* ── Add bulk rooms ───────────────────────────────── */
+    function addBulkRooms() {
+      const raw   = document.getElementById("bulkRoomInput").value;
+      const names = raw.split("\n").map(r => r.trim()).filter(r => r.length > 0);
+      if (names.length === 0) { showToast("warning", "No room names found."); return; }
+
+      const dupes = names.filter(n => rooms.includes(n));
+      const fresh = names.filter(n => !rooms.includes(n));
+      rooms.push(...fresh);
+      document.getElementById("bulkRoomInput").value = "";
+      renderQRGrid();
+
+      if (fresh.length > 0 && dupes.length > 0)
+        showToast("warning", `${fresh.length} added, ${dupes.length} skipped (already exist).`);
+      else if (fresh.length > 0)
+        showToast("success", `${fresh.length} room${fresh.length > 1 ? "s" : ""} added.`);
+      else
+        showToast("warning", "All rooms already exist.");
+    }
+
+    /* ── Remove room ──────────────────────────────────── */
+    function removeRoom(name) {
+      rooms = rooms.filter(r => r !== name);
+      delete qrInstances[name];
+      renderQRGrid();
+    }
+
+    /* ── Render QR grid ───────────────────────────────── */
+    function renderQRGrid() {
+      const grid       = document.getElementById("qrGrid");
+      const emptyState = document.getElementById("emptyState");
+      const printBtn   = document.getElementById("printBtn");
+
+      if (rooms.length === 0) {
+        grid.classList.add("hidden");
+        grid.innerHTML = "";
+        emptyState.classList.remove("hidden");
+        printBtn.classList.add("hidden");
+        document.getElementById("printArea").innerHTML = "";
+        return;
+      }
+
+      emptyState.classList.add("hidden");
+      grid.classList.remove("hidden");
+      printBtn.classList.remove("hidden");
+
+      // Only render NEW rooms (don't re-render existing ones)
+      rooms.forEach(name => {
+        if (document.getElementById(`qr-screen-${CSS.escape(name)}`)) return;
+
+        // ── Screen card ──────────────────────────────
+        const card = document.createElement("div");
+        card.className = "qr-card";
+        card.id = `qr-screen-${name}`;
+        card.innerHTML = `
+          <button class="remove-btn" onclick="removeRoom(${JSON.stringify(name)})" title="Remove">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+          <div class="qr-box" id="qr-canvas-${name}"></div>
+          <p class="room-label">${escapeHtml(name)}</p>
+          <p class="room-sublabel">NEU Laboratory Usage Log</p>
+        `;
+        grid.appendChild(card);
+
+        // Generate QR code into the canvas div
+        new QRCode(document.getElementById(`qr-canvas-${name}`), {
+          text:          name,
+          width:         160,
+          height:        160,
+          colorDark:     "#000000",
+          colorLight:    "#ffffff",
+          correctLevel:  QRCode.CorrectLevel.H,
+        });
+      });
+
+      // Remove cards for deleted rooms
+      grid.querySelectorAll(".qr-card").forEach(card => {
+        const cardName = card.id.replace("qr-screen-", "");
+        if (!rooms.includes(cardName)) card.remove();
+      });
+
+      buildPrintArea();
+    }
+
+    /* ── Build print-ready area ───────────────────────── */
+    function buildPrintArea() {
+      const area = document.getElementById("printArea");
+      area.innerHTML = "";
+
+      rooms.forEach(name => {
+        // Get the QR image src from the already-generated canvas
+        const canvasEl = document.getElementById(`qr-canvas-${name}`);
+        const img      = canvasEl?.querySelector("img") || canvasEl?.querySelector("canvas");
+        let qrSrc      = "";
+
+        if (img?.tagName === "IMG")    qrSrc = img.src;
+        if (img?.tagName === "CANVAS") qrSrc = img.toDataURL();
+
+        const printCard = document.createElement("div");
+        printCard.className = "print-card";
+        printCard.innerHTML = `
+          <p class="print-school">New Era University</p>
+          <p class="print-system">Laboratory Usage Log System</p>
+          <div class="print-qr">
+            <img src="${qrSrc}" width="180" height="180" alt="QR for ${escapeHtml(name)}"/>
+          </div>
+          <p class="print-room">${escapeHtml(name)}</p>
+          <p class="print-instruction">Scan this QR code to log room usage</p>
+        `;
+        area.appendChild(printCard);
+      });
+    }
+
+    /* ── Print ────────────────────────────────────────── */
+    function printAll() {
+      if (rooms.length === 0) { showToast("warning", "Add at least one room first."); return; }
+      buildPrintArea(); // Rebuild to ensure QR images are fresh
+      setTimeout(() => window.print(), 100);
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+  </script>
+
+</body>
+</html>

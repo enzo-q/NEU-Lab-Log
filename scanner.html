@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEU Lab Log — Scanner</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0B1E3D" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="NEU Lab Log" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Nunito+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy:  { 950:'#060F1E', 900:'#0B1E3D', 800:'#102348', 700:'#163060', 600:'#1B4F9E' },
+            gold:  { 600:'#B8891A', 500:'#D4A820', 400:'#E8BC30', 300:'#F5D060' },
+          },
+          fontFamily: {
+            display: ['Outfit', 'sans-serif'],
+            body:    ['Nunito Sans', 'sans-serif'],
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Firebase Compat SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <!-- html5-qrcode library -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <link rel="stylesheet" href="css/scanner.css" />
+</head>
+
+<body style="background-color:#060F1E;color:white;">
+  <!-- Auth guard overlay (shows while checking auth) -->
+  <div id="authGuard" class="fixed inset-0 bg-navy-950 flex items-center justify-center z-50">
+    <div class="text-center">
+      <div class="spinner mx-auto mb-4" style="width:32px;height:32px;border-width:4px"></div>
+      <p class="text-white/40 text-sm font-display">Verifying access…</p>
+    </div>
+  </div>
+
+  <!-- ── TOP NAVIGATION ──────────────────────────────────────── -->
+  <nav class="topnav sticky top-0 z-40">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <!-- Logo -->
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-navy-700/80 border border-gold-500/30 flex items-center justify-center">
+          <svg class="w-4 h-4" viewBox="0 0 32 32" fill="none">
+            <rect x="4" y="4" width="10" height="10" rx="1.5" stroke="#D4A820" stroke-width="1.8" fill="none"/>
+            <rect x="6.5" y="6.5" width="5" height="5" rx="0.5" fill="#D4A820"/>
+            <rect x="18" y="4" width="10" height="10" rx="1.5" stroke="#D4A820" stroke-width="1.8" fill="none"/>
+            <rect x="20.5" y="6.5" width="5" height="5" rx="0.5" fill="#D4A820"/>
+            <rect x="4" y="18" width="10" height="10" rx="1.5" stroke="#D4A820" stroke-width="1.8" fill="none"/>
+            <rect x="6.5" y="20.5" width="5" height="5" rx="0.5" fill="#D4A820"/>
+            <rect x="18" y="24" width="10" height="4" rx="1" stroke="#D4A820" stroke-width="1.6" fill="none"/>
+            <rect x="24" y="18" width="4" height="10" rx="1" stroke="#D4A820" stroke-width="1.6" fill="none"/>
+          </svg>
+        </div>
+        <span class="font-display font-bold text-white text-lg">NEU <span class="logo-text">Lab Log</span></span>
+      </div>
+
+      <!-- User info + Sign out -->
+      <div class="flex items-center gap-3">
+        <div class="hidden sm:flex items-center gap-2.5">
+          <img id="userAvatar" src="" alt="" class="w-7 h-7 rounded-full border border-white/20 hidden" />
+          <div class="text-right">
+            <p id="userName" class="text-white/90 text-xs font-semibold leading-tight"></p>
+            <p id="userEmail" class="text-white/40 text-xs leading-tight"></p>
+          </div>
+        </div>
+        <div class="w-px h-6 bg-white/10 hidden sm:block"></div>
+        <a href="professor-dashboard.html"
+          class="hidden sm:flex items-center gap-1.5 text-white/50 hover:text-gold-400 text-xs font-semibold transition-colors px-2 py-1.5 rounded-lg hover:bg-white/5"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+          My Sessions
+        </a>
+        <div class="w-px h-6 bg-white/10 hidden sm:block"></div>
+        <button
+          id="signOutBtn"
+          class="flex items-center gap-1.5 text-white/50 hover:text-white/80 text-xs font-semibold transition-colors px-2 py-1.5 rounded-lg hover:bg-white/5"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
+          Sign Out
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── MAIN CONTENT ───────────────────────────────────────── -->
+  <main class="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+
+    <!-- Page header -->
+    <div class="mb-6">
+      <div class="flex items-center gap-2 mb-1">
+        <div class="live-pulse w-2 h-2 rounded-full bg-green-400" id="liveIndicator"></div>
+        <span class="text-green-400 text-xs font-semibold tracking-wide uppercase font-display" id="statusLabel">Ready to Scan</span>
+      </div>
+      <h1 class="font-display font-bold text-white text-2xl sm:text-3xl">Room QR Scanner</h1>
+      <p class="text-white/40 text-sm mt-1">Point your camera at a room's QR code to log your usage.</p>
+    </div>
+
+    <!-- Two-column layout on larger screens -->
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+      <!-- ── SCANNER COLUMN ──────────────────────────────────── -->
+      <div class="lg:col-span-3">
+        <div class="glass-card rounded-2xl overflow-hidden">
+
+          <!-- Camera controls bar -->
+          <div class="flex items-center justify-between px-4 py-3 border-b border-white/07">
+            <span class="text-white/60 text-xs font-semibold font-display uppercase tracking-wide">Camera Feed</span>
+            <div class="flex gap-2">
+              <button id="startBtn"
+                class="px-3 py-1.5 rounded-lg bg-gold-500/20 hover:bg-gold-500/30 text-gold-400 text-xs font-bold font-display transition-colors flex items-center gap-1.5"
+              >
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/>
+                </svg>
+                Start
+              </button>
+              <button id="stopBtn"
+                class="hidden px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-white/60 text-xs font-bold font-display transition-colors flex items-center gap-1.5"
+              >
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M4.5 4.5A.5.5 0 015 4h10a.5.5 0 01.5.5v11a.5.5 0 01-.5.5H5a.5.5 0 01-.5-.5v-11z" clip-rule="evenodd"/>
+                </svg>
+                Stop
+              </button>
+            </div>
+          </div>
+
+          <!-- Scanner area -->
+          <div class="relative bg-black/40" style="aspect-ratio: 4/3;">
+            <!-- Camera feed -->
+            <div id="qr-reader" class="absolute inset-0"></div>
+
+            <!-- Placeholder (shown before camera starts) -->
+            <div id="cameraPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center gap-4">
+              <div class="w-16 h-16 rounded-2xl border-2 border-dashed border-white/20 flex items-center justify-center">
+                <svg class="w-8 h-8 text-white/25" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"/>
+                </svg>
+              </div>
+              <p class="text-white/30 text-sm text-center px-4">Press <strong class="text-gold-400">Start</strong> to activate your camera and begin scanning.</p>
+            </div>
+
+            <!-- Scan frame overlay (shown during scanning) -->
+            <div id="scanFrame" class="hidden absolute inset-0 pointer-events-none">
+              <!-- Semi-transparent mask with clear center -->
+              <div class="absolute inset-0" style="background: rgba(0,0,0,0.45);"></div>
+              <div class="absolute inset-0 flex items-center justify-center">
+                <!-- Clear scan zone -->
+                <div class="relative" style="width:220px;height:220px;">
+                  <div class="absolute inset-0 bg-transparent border-0"></div>
+                  <!-- Corners -->
+                  <div class="scan-corner tl"></div>
+                  <div class="scan-corner tr"></div>
+                  <div class="scan-corner bl"></div>
+                  <div class="scan-corner br"></div>
+                  <!-- Scan line -->
+                  <div class="scan-line"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Success overlay -->
+            <div id="successOverlay" class="hidden absolute inset-0 bg-green-500/20 flex items-center justify-center">
+              <div class="success-state bg-green-500 rounded-full p-4 shadow-2xl">
+                <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+              <!-- Confetti container -->
+              <div id="confettiContainer" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cooldown bar -->
+        <div id="cooldownSection" class="hidden mt-3 glass-card rounded-xl px-4 py-3">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-white/50 text-xs font-semibold">Cooldown active</span>
+            <span id="cooldownCount" class="text-gold-400 text-xs font-bold font-display">5s</span>
+          </div>
+          <div class="h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <div id="cooldownBar" class="h-full bg-gold-500 rounded-full cooldown-bar" style="width:100%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── INFO COLUMN ─────────────────────────────────────── -->
+      <div class="lg:col-span-2 flex flex-col gap-4">
+
+        <!-- Result card (updated after scan) -->
+        <div id="resultCard" class="glass-card rounded-2xl p-5 hidden slide-up">
+          <!-- Injected dynamically -->
+        </div>
+
+        <!-- Recent scans today -->
+        <div class="glass-card rounded-2xl p-5 flex-1">
+          <h3 class="font-display font-semibold text-white/80 text-sm mb-3 flex items-center gap-2">
+            <svg class="w-3.5 h-3.5 text-gold-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
+            </svg>
+            Today's Activity
+          </h3>
+          <div id="todayLogs" class="space-y-2">
+            <p class="text-white/25 text-xs text-center py-4">No scans yet today.</p>
+          </div>
+        </div>
+
+        <!-- Instructions card -->
+        <div class="glass-card rounded-2xl p-5">
+          <h3 class="font-display font-semibold text-white/80 text-sm mb-3 flex items-center gap-2">
+            <svg class="w-3.5 h-3.5 text-gold-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+            </svg>
+            How to Use
+          </h3>
+          <ol class="space-y-2.5">
+            <li class="flex items-start gap-2.5 text-xs text-white/50">
+              <span class="shrink-0 w-4 h-4 rounded-full bg-navy-700 border border-gold-500/40 text-gold-400 font-bold font-display flex items-center justify-center text-[10px]">1</span>
+              Press <strong class="text-white/70">Start</strong> to activate the camera.
+            </li>
+            <li class="flex items-start gap-2.5 text-xs text-white/50">
+              <span class="shrink-0 w-4 h-4 rounded-full bg-navy-700 border border-gold-500/40 text-gold-400 font-bold font-display flex items-center justify-center text-[10px]">2</span>
+              Point the camera at the QR code posted in the room.
+            </li>
+            <li class="flex items-start gap-2.5 text-xs text-white/50">
+              <span class="shrink-0 w-4 h-4 rounded-full bg-navy-700 border border-gold-500/40 text-gold-400 font-bold font-display flex items-center justify-center text-[10px]">3</span>
+              Wait for the green success confirmation.
+            </li>
+            <li class="flex items-start gap-2.5 text-xs text-white/50">
+              <span class="shrink-0 w-4 h-4 rounded-full bg-navy-700 border border-gold-500/40 text-gold-400 font-bold font-display flex items-center justify-center text-[10px]">4</span>
+              Your usage is logged. You may scan again after 5 seconds.
+            </li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/firebase-config.js"></script>
+  <script src="js/scanner.js"></script>
+</body>
+</html>
