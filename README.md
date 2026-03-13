@@ -4,6 +4,9 @@ A Progressive Web App (PWA) for logging professor room usage at NEU — built wi
 
 Professors scan a QR code to check in to a room. Admins monitor all activity from a desktop dashboard.
 
+Live deployed link (using Firebase Hosting):
+https://database-1011.web.app/
+
 ---
 
 ## Features
