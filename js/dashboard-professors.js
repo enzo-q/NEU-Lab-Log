@@ -97,7 +97,11 @@ function renderProfessorsTable() {
         ${p.isBlocked ? "Unblock" : "Block"}
       </button>
       ${p.isAdmin
-        ? `<span class="badge badge-blue" title="Already an admin">Admin</span>`
+        ? `<button onclick="revokeAdmin('${p.uid}', '${p.email}')"
+            class="px-2.5 py-1.5 rounded-lg text-xs font-bold font-display transition-all whitespace-nowrap bg-red-500/10 hover:bg-red-500/20 text-red-300/70 hover:text-red-300 border border-red-500/20"
+            title="Revoke admin access — restores to professor">
+            Revoke Admin
+          </button>`
         : `<button onclick="promoteToAdmin('${p.uid}', '${p.email}')"
             class="px-2.5 py-1.5 rounded-lg text-xs font-bold font-display transition-all whitespace-nowrap bg-blue-500/10 hover:bg-blue-500/20 text-blue-300/70 hover:text-blue-300 border border-blue-500/20"
             title="Grant this professor admin access">
@@ -257,17 +261,13 @@ function updateProfessorsCountBadge() {
 async function promoteToAdmin(uid, email) {
   if (!confirm(`Grant admin access to ${email}?\n\nThey will be able to access the admin dashboard on their next sign-in. This cannot be undone from this panel.`)) return;
   try {
-    // Set role: 'admin' and isAdmin: true on the professor's doc.
-    // Admin writing ANOTHER user's doc — not a circular read, works fine.
     await db.collection("users").doc(uid).update({
       role:    "admin",
       isAdmin: true,
     });
-
-    // Remove from local allProfessors so they disappear from the table
-    allProfessors = allProfessors.filter(p => p.uid !== uid);
+    const idx = allProfessors.findIndex(p => p.uid === uid);
+    if (idx !== -1) { allProfessors[idx].role = "admin"; allProfessors[idx].isAdmin = true; }
     renderProfessorsTable();
-
     showToast("success", `${email} has been granted admin access.`);
     writeAudit("promote_admin", { professorUid: uid, professorEmail: email });
   } catch(e) {
@@ -276,3 +276,21 @@ async function promoteToAdmin(uid, email) {
   }
 }
 
+// ── Revoke Admin — restores user back to pure professor ───────────────────
+async function revokeAdmin(uid, email) {
+  if (!confirm(`Revoke admin access for ${email}?\n\nThey will be restored to a regular professor and lose dashboard access.`)) return;
+  try {
+    await db.collection("users").doc(uid).update({
+      role:    "professor",
+      isAdmin: false,
+    });
+    const idx = allProfessors.findIndex(p => p.uid === uid);
+    if (idx !== -1) { allProfessors[idx].role = "professor"; allProfessors[idx].isAdmin = false; }
+    renderProfessorsTable();
+    showToast("success", `${email} has been restored to professor.`);
+    writeAudit("revoke_admin", { professorUid: uid, professorEmail: email });
+  } catch(e) {
+    console.error("revokeAdmin error:", e);
+    showToast("error", "Failed to revoke admin access. Please try again.");
+  }
+}

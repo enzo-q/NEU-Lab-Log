@@ -28,6 +28,8 @@ const AUDIT_META = {
     svg:`<path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>` },
   promote_admin: { label:"Promote Admin", pillar:"promote-admin",  iconClass:"audit-unblock",
     svg:`<path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>` },
+  revoke_admin:  { label:"Revoke Admin",  pillar:"revoke-admin",   iconClass:"audit-block",
+    svg:`<path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>` },
   // ── Professor activity ────────────────────────────────────────────────
   prof_signin:   { label:"Prof Sign-in",  pillar:"prof-signin",   iconClass:"audit-prof-signin",
     svg:`<path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>` },
@@ -44,7 +46,7 @@ let auditPage           = 1;
 const AUDIT_PAGE_SIZE   = 20;
 let _auditUnsubscribe   = null;    // holds the active onSnapshot unsubscribe fn
 
-const ADMIN_ACTIONS = new Set(["void_log","restore_log","block","unblock","wl_add","wl_remove","wl_bulk","force_checkout","role_switch","promote_admin"]);
+const ADMIN_ACTIONS = new Set(["void_log","restore_log","block","unblock","wl_add","wl_remove","wl_bulk","force_checkout","role_switch","promote_admin","revoke_admin"]);
 const PROF_ACTIONS  = new Set(["prof_signin","prof_scan","prof_checkout"]);
 
 // ── Write an audit entry — optimistic local prepend, zero-latency ─────────
@@ -303,6 +305,9 @@ function buildAuditDetail(entry) {
     case "promote_admin":
       return `Promoted <strong class="text-white/65">${esc(entry.professorEmail)}</strong> to <strong class="text-white/65">Admin</strong>`;
 
+    case "revoke_admin":
+      return `Revoked admin access for <strong class="text-white/65">${esc(entry.professorEmail)}</strong> — restored to professor`;
+
     case "prof_signin":
       return `<strong class="text-white/65">${esc(entry.professorEmail || entry.adminEmail)}</strong> signed in to the app`;
 
@@ -393,4 +398,3 @@ function exportAuditCSV() {
   URL.revokeObjectURL(url);
   showToast("success", `Exported ${allAuditLogs.length} audit entr${allAuditLogs.length !== 1 ? "ies" : "y"}.`);
 }
-
