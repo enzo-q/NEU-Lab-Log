@@ -96,6 +96,15 @@
           My Sessions
         </a>
         <div class="w-px h-6 bg-white/10 hidden sm:block"></div>
+        <button id="switchAdminBtn" onclick="switchToAdmin()"
+          class="hidden items-center gap-1.5 text-blue-300/70 hover:text-blue-300 text-xs font-semibold transition-colors px-2 py-1.5 rounded-lg hover:bg-blue-500/10"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+          </svg>
+          Switch to Admin
+        </button>
+        <div class="w-px h-6 bg-white/10 hidden sm:block"></div>
         <button
           id="signOutBtn"
           class="flex items-center gap-1.5 text-white/50 hover:text-white/80 text-xs font-semibold transition-colors px-2 py-1.5 rounded-lg hover:bg-white/5"
@@ -287,6 +296,14 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
         </svg>
         Sign Out
+      </button>
+
+      <!-- Shown only when an admin is in professor mode -->
+      <button id="switchAdminBtnBottom" onclick="switchToAdmin()" style="display:none;flex:1;flex-direction:column;align-items:center;gap:3px;padding:10px 0;color:rgba(147,197,253,0.75);font-size:10px;font-weight:700;font-family:'Outfit',sans-serif;text-transform:uppercase;letter-spacing:0.05em;cursor:pointer;background:none;border:none;">
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+        </svg>
+        Admin
       </button>
 
     </div>

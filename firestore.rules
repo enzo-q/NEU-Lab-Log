@@ -14,6 +14,12 @@ service cloud.firestore {
                     && request.auth.uid == userId
                     && request.resource.data.role == 'professor'
                     && request.resource.data.isBlocked == false;
+      // Allow admins to update their own doc when switching roles.
+      // isAdmin == true is set permanently the first time they switch,
+      // so they can always switch back even when role is 'professor'.
+      allow update: if request.auth != null
+                    && request.auth.uid == userId
+                    && resource.data.isAdmin == true;
     }
 
     match /logs/{logId} {

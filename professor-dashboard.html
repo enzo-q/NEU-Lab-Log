@@ -78,8 +78,16 @@
       </div>
     </div>
 
-    <!-- Profile -->
+    <!-- Profile + Admin switch -->
     <div class="flex items-center gap-2">
+      <button id="switchAdminBtn" onclick="switchToAdmin()"
+        class="hidden items-center gap-1.5 text-blue-300/70 hover:text-blue-300 text-xs font-semibold transition-colors px-2 py-1.5 rounded-lg hover:bg-blue-500/10"
+      >
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+        </svg>
+        <span class="hidden sm:inline">Switch to Admin</span>
+      </button>
       <img id="userAvatar" src="" alt="" class="w-7 h-7 rounded-full border border-white/20 hidden" />
       <div class="text-right hidden sm:block">
         <p id="userName" class="text-white/80 text-xs font-semibold leading-tight truncate max-w-[140px]"></p>
@@ -210,6 +218,13 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
       </svg>
       Sign Out
+    </button>
+    <!-- Shown only when an admin is in professor mode -->
+    <button id="switchAdminBtnBottom" onclick="switchToAdmin()" class="nav-tab" style="display:none;color:rgba(147,197,253,0.75);">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+      </svg>
+      Admin
     </button>
   </div>
 </nav>

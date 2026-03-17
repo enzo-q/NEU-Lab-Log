@@ -48,6 +48,34 @@ async function handleSignOut() {
   window.location.href = "index.html";
 }
 
+// ── Role Switching ────────────────────────────────────────────────────────
+async function switchToProf() {
+  if (!confirm("Switch to Professor mode?\n\nYou'll be taken to the scanner. Your admin role is saved — switch back any time from the professor panel.")) return;
+  try {
+    // Mark isAdmin: true permanently (stays even when role = 'professor')
+    // so the security rule allows switching back later.
+    await db.collection("users").doc(currentUser.uid).update({
+      role:    "professor",
+      isAdmin: true,
+    });
+
+    // Write audit BEFORE redirecting (fire-and-forget is fine here)
+    await db.collection("auditLogs").add({
+      action:    "role_switch",
+      adminEmail: currentUser.email,
+      adminUid:   currentUser.uid,
+      fromRole:  "admin",
+      toRole:    "professor",
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+
+    window.location.href = "scanner.html";
+  } catch(e) {
+    console.error("switchToProf error:", e);
+    showToast("error", "Could not switch role. Please try again.");
+  }
+}
+
 // ── Tab Switching ────────────────────────────────────────────────────────────
 function switchTab(name) {
   ["overview","logs","professors","audit"].forEach(t => {

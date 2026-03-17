@@ -43,6 +43,13 @@
           return;
         }
         currentUser = user;
+        // Show "Switch to Admin" button if this user is actually an admin in professor mode
+        if (doc.data().isAdmin === true) {
+          const btn = document.getElementById("switchAdminBtn");
+          if (btn) btn.classList.remove("hidden");
+          const btnBottom = document.getElementById("switchAdminBtnBottom");
+          if (btnBottom) btnBottom.style.display = "flex";
+        }
         populateUserUI(user);
         loadTodayScans();
         authGuard.style.opacity = "0";
@@ -89,6 +96,26 @@
       await auth.signOut();
       window.location.href = "index.html";
     });
+
+    // ── Switch back to Admin ─────────────────────────────────────
+    async function switchToAdmin() {
+      try {
+        await stopScanner();
+        await db.collection("users").doc(currentUser.uid).update({ role: "admin" });
+        await db.collection("auditLogs").add({
+          action:     "role_switch",
+          adminEmail: currentUser.email,
+          adminUid:   currentUser.uid,
+          fromRole:   "professor",
+          toRole:     "admin",
+          timestamp:  firebase.firestore.FieldValue.serverTimestamp(),
+        });
+        window.location.href = "dashboard.html";
+      } catch(e) {
+        console.error("switchToAdmin error:", e);
+        alert("Could not switch role. Please try again.");
+      }
+    }
 
     // ── QR Scanner ───────────────────────────────────────────────
     startBtn.addEventListener("click", startScanner);

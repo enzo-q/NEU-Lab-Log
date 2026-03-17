@@ -19,6 +19,13 @@ auth.onAuthStateChanged(async (user) => {
       return;
     }
     currentUser = user;
+    // Show "Switch to Admin" button if this user is an admin in professor mode
+    if (doc.data().isAdmin === true) {
+      const btn = document.getElementById("switchAdminBtn");
+      if (btn) btn.classList.remove("hidden");
+      const btnBottom = document.getElementById("switchAdminBtnBottom");
+      if (btnBottom) btnBottom.style.display = "flex";
+    }
     populateUI(user);
     await loadSessions();
     fadeOutGuard();
@@ -72,7 +79,41 @@ async function handleSignOut() {
   window.location.href = "index.html";
 }
 
-// ── Load Today's Sessions ─────────────────────────────────────────────────────
+// ── Switch back to Admin ──────────────────────────────────────────────────────
+async function switchToAdmin() {
+  // Auto-checkout active session first so the room is freed
+  if (activeSession) {
+    try {
+      await db.collection("logs").doc(activeSession.id).update({
+        logoutAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      await db.collection("activeRooms").doc(activeSession.roomNumber).delete().catch(() => {});
+      db.collection("auditLogs").add({
+        action: "prof_checkout", professorEmail: currentUser.email, professorUid: currentUser.uid,
+        roomNumber: activeSession.roomNumber, logDocId: activeSession.id,
+        autoCheckout: true,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      }).catch(() => {});
+    } catch(_) {}
+  }
+  try {
+    await db.collection("users").doc(currentUser.uid).update({ role: "admin" });
+    await db.collection("auditLogs").add({
+      action:     "role_switch",
+      adminEmail: currentUser.email,
+      adminUid:   currentUser.uid,
+      fromRole:   "professor",
+      toRole:     "admin",
+      timestamp:  firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    window.location.href = "dashboard.html";
+  } catch(e) {
+    console.error("switchToAdmin error:", e);
+    alert("Could not switch role. Please try again.");
+  }
+}
+
+
 async function loadSessions() {
   document.getElementById("loadingCard").style.display    = "flex";
   document.getElementById("activeSessionCard").classList.add("hidden");
