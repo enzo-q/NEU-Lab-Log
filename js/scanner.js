@@ -36,15 +36,19 @@
       }
 
       try {
-        const doc = await db.collection("users").doc(user.uid).get();
-        if (!doc.exists || doc.data().role !== "professor" || doc.data().isBlocked === true) {
+        const doc  = await db.collection("users").doc(user.uid).get();
+        const data = doc.exists ? doc.data() : null;
+        const isProfessor = data?.role === "professor";
+        const isAdminAsProf = data?.role === "admin" && data?.viewAs === "professor";
+
+        if (!data || (!isProfessor && !isAdminAsProf) || data.isBlocked === true) {
           await auth.signOut();
           window.location.href = "index.html";
           return;
         }
         currentUser = user;
-        // Show "Switch to Admin" button if this user is actually an admin in professor mode
-        if (doc.data().isAdmin === true) {
+        // Show "Switch to Admin" button for admins in professor mode
+        if (data.isAdmin === true || data.role === "admin") {
           const btn = document.getElementById("switchAdminBtn");
           if (btn) btn.classList.remove("hidden");
           const btnBottom = document.getElementById("switchAdminBtnBottom");
@@ -101,7 +105,10 @@
     async function switchToAdmin() {
       try {
         await stopScanner();
-        await db.collection("users").doc(currentUser.uid).update({ role: "admin" });
+        // Clear viewAs — role was never changed, so no circular-read issue.
+        await db.collection("users").doc(currentUser.uid).update({
+          viewAs: firebase.firestore.FieldValue.delete(),
+        });
         await db.collection("auditLogs").add({
           action:     "role_switch",
           adminEmail: currentUser.email,

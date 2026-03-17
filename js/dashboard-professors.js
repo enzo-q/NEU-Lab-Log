@@ -89,6 +89,11 @@ function renderProfessorsTable() {
             ? 'bg-green-500/15 hover:bg-green-500/25 text-green-400 border border-green-500/30'
             : 'bg-amber-500/12 hover:bg-amber-500/22 text-amber-400/80 hover:text-amber-300 border border-amber-500/25'}">
         ${p.isBlocked ? "Unblock" : "Block"}
+      </button>
+      <button onclick="promoteToAdmin('${p.uid}', '${p.email}')"
+        class="px-2.5 py-1.5 rounded-lg text-xs font-bold font-display transition-all whitespace-nowrap bg-blue-500/10 hover:bg-blue-500/20 text-blue-300/70 hover:text-blue-300 border border-blue-500/20"
+        title="Grant this professor admin access">
+        Make Admin
       </button>` :
       `<span class="text-white/20 text-[10px] italic px-1">not signed in</span>`;
 
@@ -239,3 +244,25 @@ function updateProfessorsCountBadge() {
   badge.classList.toggle("hidden", allWhitelist.length === 0);
 }
 
+// ── Promote professor to Admin ────────────────────────────────────────────
+async function promoteToAdmin(uid, email) {
+  if (!confirm(`Grant admin access to ${email}?\n\nThey will be able to access the admin dashboard on their next sign-in. This cannot be undone from this panel.`)) return;
+  try {
+    // Set role: 'admin' and isAdmin: true on the professor's doc.
+    // Admin writing ANOTHER user's doc — not a circular read, works fine.
+    await db.collection("users").doc(uid).update({
+      role:    "admin",
+      isAdmin: true,
+    });
+
+    // Remove from local allProfessors so they disappear from the table
+    allProfessors = allProfessors.filter(p => p.uid !== uid);
+    renderProfessorsTable();
+
+    showToast("success", `${email} has been granted admin access.`);
+    writeAudit("promote_admin", { professorUid: uid, professorEmail: email });
+  } catch(e) {
+    console.error("promoteToAdmin error:", e);
+    showToast("error", "Failed to promote user. Please try again.");
+  }
+}

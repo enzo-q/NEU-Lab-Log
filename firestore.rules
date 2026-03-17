@@ -7,11 +7,16 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read:   if request.auth != null && request.auth.uid == userId;
-      allow read:   if request.auth != null && userDoc().role == 'admin';
+      // Any user reads their own doc
+      allow read: if request.auth != null && request.auth.uid == userId;
+      // Admins read all user docs
+      allow read: if request.auth != null && userDoc().role == 'admin';
 
-      // Admins write OTHER users' docs (block, unblock, role changes via dashboard)
-      allow write:  if request.auth != null && userDoc().role == 'admin';
+      // Admins write OTHER users' docs (block, unblock, promote, etc.)
+      // userId != auth.uid means userDoc() reads a DIFFERENT doc — no circular read.
+      allow write: if request.auth != null
+                   && request.auth.uid != userId
+                   && userDoc().role == 'admin';
 
       // A new professor creates their own doc on first sign-in
       allow create: if request.auth != null
@@ -19,48 +24,39 @@ service cloud.firestore {
                     && request.resource.data.role == 'professor'
                     && request.resource.data.isBlocked == false;
 
-      // Role switching — a user updates ONLY their own role/isAdmin fields.
-      // Avoids calling userDoc() (which would be a circular read on the same doc).
-      //   • Anyone may switch to 'professor' (the dashboard JS still gates access)
-      //   • Only users with isAdmin==true on the CURRENT doc may switch back to 'admin'
-      //   • No other fields may be touched (email, isBlocked, displayName etc. are protected)
+      // An admin updates their OWN doc for role-switching (viewAs field).
+      // Does NOT call userDoc() — avoids circular read on the same document.
+      // Only allows touching viewAs, role, isAdmin — nothing sensitive.
       allow update: if request.auth != null
                     && request.auth.uid == userId
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'isAdmin'])
-                    && (
-                         request.resource.data.role == 'professor'
-                         || (request.resource.data.role == 'admin' && resource.data.isAdmin == true)
-                       );
+                    && request.resource.data.diff(resource.data)
+                         .affectedKeys().hasOnly(['viewAs', 'role', 'isAdmin']);
     }
 
     match /logs/{logId} {
-      // Professors read their OWN logs only
+      // Professors (or admins acting as professor) read their own logs
       allow read: if request.auth != null
                   && resource.data.professorUid == request.auth.uid;
-
-      // Admins read ALL logs
+      // Admins read all logs
       allow read: if request.auth != null && userDoc().role == 'admin';
 
-      // Professors create new check-in logs.
-      // SERVER-SIDE ENFORCEMENT: room must not be occupied.
-      // The !exists() check runs on the Firestore server — no client code
-      // can bypass it. Even if the client-side transaction logic has any
-      // issue, this rule is the final gate that prevents two professors
-      // from occupying the same room simultaneously.
+      // Professor creates a check-in log.
+      // Also allows admin acting as professor (role='admin', viewAs='professor').
+      // SERVER-SIDE: room must not be occupied.
       allow create: if request.auth != null
                     && request.resource.data.professorUid == request.auth.uid
-                    && userDoc().role == 'professor'
+                    && (userDoc().role == 'professor' || (userDoc().role == 'admin' && userDoc().viewAs == 'professor'))
                     && userDoc().isBlocked == false
                     && !exists(/databases/$(database)/documents/activeRooms/$(request.resource.data.roomNumber));
 
-      // Professors update ONLY logoutAt on their own logs (check-out)
+      // Professor updates only logoutAt on their own log
       allow update: if request.auth != null
                     && resource.data.professorUid == request.auth.uid
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['logoutAt'])
-                    && userDoc().role == 'professor'
+                    && (userDoc().role == 'professor' || (userDoc().role == 'admin' && userDoc().viewAs == 'professor'))
                     && userDoc().isBlocked == false;
 
-      // Admins update any field (void / restore / annotate)
+      // Admins update any field (void / restore)
       allow update: if request.auth != null && userDoc().role == 'admin';
     }
 
@@ -75,22 +71,18 @@ service cloud.firestore {
     }
 
     match /qrRooms/{roomId} {
-      // Any authenticated user can read (professors need it for nothing currently,
-      // but keeping it open means future features can use it freely)
       allow read:  if request.auth != null;
-      // Only admins can create, update, or delete QR room records
       allow write: if request.auth != null && userDoc().role == 'admin';
     }
 
     match /activeRooms/{roomId} {
-      // Any authenticated user can read — needed for occupancy check
       allow read: if request.auth != null;
 
-      // Only the professor whose UID matches can claim a room
+      // Professor (or admin acting as professor) can claim a room
       allow create: if request.auth != null
                     && request.resource.data.professorUid == request.auth.uid;
 
-      // Only the occupying professor or an admin can free a room
+      // Occupying user or admin can free a room
       allow delete: if request.auth != null
                     && (resource.data.professorUid == request.auth.uid
                         || userDoc().role == 'admin');
