@@ -77,3 +77,78 @@ function updateLogsCountBadge() {
   else           { badge.classList.add("hidden"); }
 }
 
+// ── Occupied Rooms panel (live) ───────────────────────────────────────────
+function renderActiveRooms() {
+  const section = document.getElementById("activeRoomsSection");
+  const list    = document.getElementById("activeRoomsList");
+  const badge   = document.getElementById("activeRoomsBadge");
+  if (!section || !list) return;
+
+  if (allActiveRooms.length === 0) {
+    section.classList.add("hidden");
+    badge.classList.add("hidden");
+    return;
+  }
+
+  section.classList.remove("hidden");
+  badge.textContent = allActiveRooms.length;
+  badge.classList.remove("hidden");
+
+  const esc = s => String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+  list.innerHTML = allActiveRooms.map(room => {
+    const since = room.timestamp?.toDate
+      ? room.timestamp.toDate().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      : "—";
+    return `
+      <div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-white/05 last:border-0">
+        <div class="flex items-center gap-3 min-w-0">
+          <span class="shrink-0 w-2 h-2 rounded-full bg-green-400" style="animation:pulse 2s cubic-bezier(0.4,0,0.6,1) infinite"></span>
+          <span class="font-display font-bold text-white text-sm shrink-0">${esc(room.id)}</span>
+          <span class="text-white/40 text-xs truncate">${esc(room.professorEmail || "—")}</span>
+        </div>
+        <div class="flex items-center gap-3 shrink-0">
+          <span class="text-white/25 text-xs hidden sm:block">since ${since}</span>
+          <button
+            onclick="forceCheckout(${JSON.stringify(room.id)}, ${JSON.stringify(room.professorEmail || "")}, ${JSON.stringify(room.logDocId || "")})"
+            class="px-3 py-1 rounded-lg text-xs font-bold font-display transition-all"
+            style="background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.22);color:rgba(248,113,113,0.85);"
+            onmouseover="this.style.background='rgba(239,68,68,0.22)';this.style.color='#f87171';"
+            onmouseout="this.style.background='rgba(239,68,68,0.10)';this.style.color='rgba(248,113,113,0.85)';"
+          >Force Checkout</button>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+async function forceCheckout(roomId, professorEmail, logDocId) {
+  const name = professorEmail || "this professor";
+  if (!confirm(`Force check out ${name} from ${roomId}?\n\nThis will end their active session immediately.`)) return;
+
+  try {
+    const batch = db.batch();
+
+    // Stamp logoutAt on the log doc so it closes cleanly
+    if (logDocId) {
+      batch.update(db.collection("logs").doc(logDocId), {
+        logoutAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+    // Delete the activeRooms doc — this frees the room immediately
+    batch.delete(db.collection("activeRooms").doc(roomId));
+
+    await batch.commit();
+
+    // Write audit trail
+    await writeAudit("force_checkout", {
+      professorEmail: professorEmail || "",
+      roomNumber:     roomId,
+      logDocId:       logDocId || "",
+    });
+
+    showToast("success", `${name} checked out of ${roomId}.`);
+  } catch(e) {
+    console.error("forceCheckout error:", e);
+    showToast("error", "Force checkout failed. Please try again.");
+  }
+}

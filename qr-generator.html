@@ -7,6 +7,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet"/>
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Firebase Compat SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <style>
@@ -178,6 +185,15 @@
 </head>
 <body style="background-color:#060F1E; color:white; min-height:100vh;">
 
+  <!-- Auth guard overlay -->
+  <div id="authGuard" style="position:fixed;inset:0;background:#060F1E;display:flex;align-items:center;justify-content:center;z-index:100;">
+    <div style="text-align:center;">
+      <div style="width:32px;height:32px;border:4px solid rgba(255,255,255,0.15);border-top-color:#D4A820;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px;"></div>
+      <p style="color:rgba(255,255,255,0.4);font-size:13px;font-family:'Outfit',sans-serif;">Verifying access…</p>
+    </div>
+  </div>
+  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
   <!-- ── Top bar ────────────────────────────────────────── -->
   <div class="no-print border-b border-white/07" style="background:rgba(6,15,30,0.95); position:sticky; top:0; z-index:50;">
     <div class="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
@@ -282,135 +298,168 @@
   <script>
     "use strict";
 
-    let rooms = []; // array of room name strings
-    let qrInstances = {}; // { roomName: QRCode instance }
+    // ── Firestore collection: qrRooms ─────────────────────────────────────────
+    // Document ID = room name (e.g. "M101")
+    // Fields: { roomName, createdAt, createdBy }
 
-    function showToast(type, msg) {
-      const el    = document.getElementById("toast");
-      const inner = document.getElementById("toastInner");
-      const colors = {
-        success: "bg-green-500/15 border-green-500/30 text-green-300",
-        error:   "bg-red-500/15 border-red-500/30 text-red-300",
-        warning: "bg-amber-500/15 border-amber-500/30 text-amber-300",
-      };
-      inner.className = `glass-card rounded-xl px-4 py-3 text-sm font-semibold flex items-center gap-2 shadow-xl border ${colors[type] || colors.success}`;
-      inner.textContent = msg;
-      el.classList.remove("hidden");
-      setTimeout(() => el.classList.add("hidden"), 3000);
+    const QR_COLLECTION = "qrRooms";
+    let currentAdmin  = null;
+    let qrInstances   = {}; // { roomName: true } — tracks rendered cards
+
+    // ── Auth guard — admin only ───────────────────────────────────────────────
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) { window.location.href = "index.html"; return; }
+      try {
+        const doc = await db.collection("users").doc(user.uid).get();
+        if (!doc.exists || doc.data().role !== "admin") {
+          await auth.signOut();
+          window.location.href = "index.html";
+          return;
+        }
+        currentAdmin = user;
+        document.getElementById("authGuard").style.display = "none";
+        await loadRooms();
+      } catch(e) {
+        console.error(e);
+        window.location.href = "index.html";
+      }
+    });
+
+    // ── Load all saved rooms from Firestore ───────────────────────────────────
+    async function loadRooms() {
+      try {
+        const snap = await db.collection(QR_COLLECTION).orderBy("createdAt", "asc").get();
+        snap.docs.forEach(doc => addCardToGrid(doc.id));
+        updateGridVisibility();
+      } catch(e) {
+        console.error("loadRooms error:", e);
+        showToast("error", "Failed to load saved rooms.");
+      }
     }
 
-    /* ── Add single room ──────────────────────────────── */
-    function addSingleRoom() {
+    // ── Add single room ───────────────────────────────────────────────────────
+    async function addSingleRoom() {
       const input = document.getElementById("singleRoomInput");
       const name  = input.value.trim();
       if (!name) { showToast("warning", "Please enter a room name."); return; }
-      if (rooms.includes(name)) { showToast("warning", `"${name}" is already in the list.`); return; }
-      rooms.push(name);
-      input.value = "";
-      renderQRGrid();
-      showToast("success", `"${name}" added.`);
+      const existing = await db.collection(QR_COLLECTION).doc(name).get();
+      if (existing.exists) { showToast("warning", `"${name}" already exists.`); return; }
+      try {
+        await db.collection(QR_COLLECTION).doc(name).set({
+          roomName:  name,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          createdBy: currentAdmin.email,
+        });
+        input.value = "";
+        addCardToGrid(name);
+        updateGridVisibility();
+        showToast("success", `"${name}" added.`);
+      } catch(e) {
+        console.error(e);
+        showToast("error", "Failed to save room. Please try again.");
+      }
     }
 
-    /* ── Add bulk rooms ───────────────────────────────── */
-    function addBulkRooms() {
+    // ── Add bulk rooms ────────────────────────────────────────────────────────
+    async function addBulkRooms() {
       const raw   = document.getElementById("bulkRoomInput").value;
       const names = raw.split("\n").map(r => r.trim()).filter(r => r.length > 0);
       if (names.length === 0) { showToast("warning", "No room names found."); return; }
 
-      const dupes = names.filter(n => rooms.includes(n));
-      const fresh = names.filter(n => !rooms.includes(n));
-      rooms.push(...fresh);
-      document.getElementById("bulkRoomInput").value = "";
-      renderQRGrid();
+      const checks = await Promise.all(names.map(n => db.collection(QR_COLLECTION).doc(n).get()));
+      const dupes  = names.filter((_, i) => checks[i].exists);
+      const fresh  = names.filter((_, i) => !checks[i].exists);
+      if (fresh.length === 0) { showToast("warning", "All rooms already exist."); return; }
 
-      if (fresh.length > 0 && dupes.length > 0)
-        showToast("warning", `${fresh.length} added, ${dupes.length} skipped (already exist).`);
-      else if (fresh.length > 0)
-        showToast("success", `${fresh.length} room${fresh.length > 1 ? "s" : ""} added.`);
-      else
-        showToast("warning", "All rooms already exist.");
-    }
-
-    /* ── Remove room ──────────────────────────────────── */
-    function removeRoom(name) {
-      rooms = rooms.filter(r => r !== name);
-      delete qrInstances[name];
-      renderQRGrid();
-    }
-
-    /* ── Render QR grid ───────────────────────────────── */
-    function renderQRGrid() {
-      const grid       = document.getElementById("qrGrid");
-      const emptyState = document.getElementById("emptyState");
-      const printBtn   = document.getElementById("printBtn");
-
-      if (rooms.length === 0) {
-        grid.classList.add("hidden");
-        grid.innerHTML = "";
-        emptyState.classList.remove("hidden");
-        printBtn.classList.add("hidden");
-        document.getElementById("printArea").innerHTML = "";
-        return;
-      }
-
-      emptyState.classList.add("hidden");
-      grid.classList.remove("hidden");
-      printBtn.classList.remove("hidden");
-
-      // Only render NEW rooms (don't re-render existing ones)
-      rooms.forEach(name => {
-        if (document.getElementById(`qr-screen-${CSS.escape(name)}`)) return;
-
-        // ── Screen card ──────────────────────────────
-        const card = document.createElement("div");
-        card.className = "qr-card";
-        card.id = `qr-screen-${name}`;
-        card.innerHTML = `
-          <button class="remove-btn" onclick="removeRoom(${JSON.stringify(name)})" title="Remove">
-            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-          </button>
-          <div class="qr-box" id="qr-canvas-${name}"></div>
-          <p class="room-label">${escapeHtml(name)}</p>
-          <p class="room-sublabel">NEU Laboratory Usage Log</p>
-        `;
-        grid.appendChild(card);
-
-        // Generate QR code into the canvas div
-        new QRCode(document.getElementById(`qr-canvas-${name}`), {
-          text:          name,
-          width:         160,
-          height:        160,
-          colorDark:     "#000000",
-          colorLight:    "#ffffff",
-          correctLevel:  QRCode.CorrectLevel.H,
+      const batch = db.batch();
+      fresh.forEach(name => {
+        batch.set(db.collection(QR_COLLECTION).doc(name), {
+          roomName:  name,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          createdBy: currentAdmin.email,
         });
       });
+      try {
+        await batch.commit();
+        document.getElementById("bulkRoomInput").value = "";
+        fresh.forEach(name => addCardToGrid(name));
+        updateGridVisibility();
+        if (dupes.length > 0)
+          showToast("warning", `${fresh.length} added, ${dupes.length} skipped (already exist).`);
+        else
+          showToast("success", `${fresh.length} room${fresh.length > 1 ? "s" : ""} added.`);
+      } catch(e) {
+        console.error(e);
+        showToast("error", "Failed to save rooms. Please try again.");
+      }
+    }
 
-      // Remove cards for deleted rooms
-      grid.querySelectorAll(".qr-card").forEach(card => {
-        const cardName = card.id.replace("qr-screen-", "");
-        if (!rooms.includes(cardName)) card.remove();
+    // ── Remove room ───────────────────────────────────────────────────────────
+    async function removeRoom(name) {
+      if (!confirm(`Remove QR code for "${name}"?\n\nProfessors will no longer be able to scan it.`)) return;
+      try {
+        await db.collection(QR_COLLECTION).doc(name).delete();
+        document.getElementById(`qr-screen-${name}`)?.remove();
+        delete qrInstances[name];
+        updateGridVisibility();
+        buildPrintArea();
+        showToast("success", `"${name}" removed.`);
+      } catch(e) {
+        console.error(e);
+        showToast("error", "Failed to remove room. Please try again.");
+      }
+    }
+
+    // ── Add a QR card to the grid (DOM only) ─────────────────────────────────
+    function addCardToGrid(name) {
+      if (qrInstances[name]) return;
+      const grid = document.getElementById("qrGrid");
+      const card = document.createElement("div");
+      card.className = "qr-card";
+      card.id = `qr-screen-${name}`;
+      card.innerHTML = `
+        <button class="remove-btn" onclick="removeRoom(${JSON.stringify(name)})" title="Remove">
+          <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+        <div class="qr-box" id="qr-canvas-${name}"></div>
+        <p class="room-label">${escapeHtml(name)}</p>
+        <p class="room-sublabel">NEU Laboratory Usage Log</p>
+      `;
+      grid.appendChild(card);
+      new QRCode(document.getElementById(`qr-canvas-${name}`), {
+        text:         name,
+        width:        160,
+        height:       160,
+        colorDark:    "#000000",
+        colorLight:   "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H,
       });
-
+      qrInstances[name] = true;
       buildPrintArea();
     }
 
-    /* ── Build print-ready area ───────────────────────── */
-    function buildPrintArea() {
-      const area = document.getElementById("printArea");
-      area.innerHTML = "";
+    // ── Show/hide grid vs empty state ─────────────────────────────────────────
+    function updateGridVisibility() {
+      const hasRooms = Object.keys(qrInstances).length > 0;
+      document.getElementById("qrGrid").classList.toggle("hidden", !hasRooms);
+      document.getElementById("emptyState").classList.toggle("hidden", hasRooms);
+      document.getElementById("printBtn").classList.toggle("hidden", !hasRooms);
+      if (!hasRooms) document.getElementById("printArea").innerHTML = "";
+    }
 
+    // ── Build print-ready area ────────────────────────────────────────────────
+    function buildPrintArea() {
+      const area  = document.getElementById("printArea");
+      const rooms = Object.keys(qrInstances);
+      area.innerHTML = "";
       rooms.forEach(name => {
-        // Get the QR image src from the already-generated canvas
         const canvasEl = document.getElementById(`qr-canvas-${name}`);
         const img      = canvasEl?.querySelector("img") || canvasEl?.querySelector("canvas");
-        let qrSrc      = "";
-
+        let qrSrc = "";
         if (img?.tagName === "IMG")    qrSrc = img.src;
         if (img?.tagName === "CANVAS") qrSrc = img.toDataURL();
-
         const printCard = document.createElement("div");
         printCard.className = "print-card";
         printCard.innerHTML = `
@@ -426,15 +475,30 @@
       });
     }
 
-    /* ── Print ────────────────────────────────────────── */
+    // ── Print ─────────────────────────────────────────────────────────────────
     function printAll() {
-      if (rooms.length === 0) { showToast("warning", "Add at least one room first."); return; }
-      buildPrintArea(); // Rebuild to ensure QR images are fresh
+      if (Object.keys(qrInstances).length === 0) { showToast("warning", "Add at least one room first."); return; }
+      buildPrintArea();
       setTimeout(() => window.print(), 100);
     }
 
+    // ── Toast ─────────────────────────────────────────────────────────────────
+    function showToast(type, msg) {
+      const el    = document.getElementById("toast");
+      const inner = document.getElementById("toastInner");
+      const colors = {
+        success: "bg-green-500/15 border-green-500/30 text-green-300",
+        error:   "bg-red-500/15 border-red-500/30 text-red-300",
+        warning: "bg-amber-500/15 border-amber-500/30 text-amber-300",
+      };
+      inner.className = `glass-card rounded-xl px-4 py-3 text-sm font-semibold flex items-center gap-2 shadow-xl border ${colors[type] || colors.success}`;
+      inner.textContent = msg;
+      el.classList.remove("hidden");
+      setTimeout(() => el.classList.add("hidden"), 3000);
+    }
+
     function escapeHtml(str) {
-      return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+      return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
     }
   </script>
 

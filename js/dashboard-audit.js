@@ -20,8 +20,10 @@ const AUDIT_META = {
     svg:`<path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>` },
   wl_remove:  { label:"WL Remove",      pillar:"wl-remove", iconClass:"audit-wl-remove",
     svg:`<path stroke-linecap="round" stroke-linejoin="round" d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zm8-5h4"/>` },
-  wl_bulk:    { label:"WL Bulk Add",    pillar:"wl-bulk",   iconClass:"audit-wl-bulk",
+  wl_bulk:    { label:"WL Bulk Add",    pillar:"wl-bulk",        iconClass:"audit-wl-bulk",
     svg:`<path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>` },
+  force_checkout: { label:"Force Checkout", pillar:"force-checkout", iconClass:"audit-block",
+    svg:`<path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>` },
   // ── Professor activity ────────────────────────────────────────────────
   prof_signin:   { label:"Prof Sign-in",  pillar:"prof-signin",   iconClass:"audit-prof-signin",
     svg:`<path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>` },
@@ -38,7 +40,7 @@ let auditPage           = 1;
 const AUDIT_PAGE_SIZE   = 20;
 let _auditUnsubscribe   = null;    // holds the active onSnapshot unsubscribe fn
 
-const ADMIN_ACTIONS = new Set(["void_log","restore_log","block","unblock","wl_add","wl_remove","wl_bulk"]);
+const ADMIN_ACTIONS = new Set(["void_log","restore_log","block","unblock","wl_add","wl_remove","wl_bulk","force_checkout"]);
 const PROF_ACTIONS  = new Set(["prof_signin","prof_scan","prof_checkout"]);
 
 // ── Write an audit entry — optimistic local prepend, zero-latency ─────────
@@ -288,6 +290,9 @@ function buildAuditDetail(entry) {
     case "wl_bulk":
       return `Bulk-added <strong class="text-white/65">${entry.count || "?"} email${(entry.count||0)!==1?"s":""}</strong> to the whitelist`;
 
+    case "force_checkout":
+      return `Force checked out <strong class="text-white/65">${esc(entry.professorEmail)}</strong> from room <strong class="text-white/65">${esc(entry.roomNumber)}</strong>`;
+
     case "prof_signin":
       return `<strong class="text-white/65">${esc(entry.professorEmail || entry.adminEmail)}</strong> signed in to the app`;
 
@@ -378,4 +383,3 @@ function exportAuditCSV() {
   URL.revokeObjectURL(url);
   showToast("success", `Exported ${allAuditLogs.length} audit entr${allAuditLogs.length !== 1 ? "ies" : "y"}.`);
 }
-

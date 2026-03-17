@@ -1,0 +1,82 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    match /users/{userId} {
+      allow read:   if request.auth != null && request.auth.uid == userId;
+      allow read:   if request.auth != null && userDoc().role == 'admin';
+      allow write:  if request.auth != null && userDoc().role == 'admin';
+      allow create: if request.auth != null
+                    && request.auth.uid == userId
+                    && request.resource.data.role == 'professor'
+                    && request.resource.data.isBlocked == false;
+    }
+
+    match /logs/{logId} {
+      // Professors read their OWN logs only
+      allow read: if request.auth != null
+                  && resource.data.professorUid == request.auth.uid;
+
+      // Admins read ALL logs
+      allow read: if request.auth != null && userDoc().role == 'admin';
+
+      // Professors create new check-in logs.
+      // SERVER-SIDE ENFORCEMENT: room must not be occupied.
+      // The !exists() check runs on the Firestore server — no client code
+      // can bypass it. Even if the client-side transaction logic has any
+      // issue, this rule is the final gate that prevents two professors
+      // from occupying the same room simultaneously.
+      allow create: if request.auth != null
+                    && request.resource.data.professorUid == request.auth.uid
+                    && userDoc().role == 'professor'
+                    && userDoc().isBlocked == false
+                    && !exists(/databases/$(database)/documents/activeRooms/$(request.resource.data.roomNumber));
+
+      // Professors update ONLY logoutAt on their own logs (check-out)
+      allow update: if request.auth != null
+                    && resource.data.professorUid == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['logoutAt'])
+                    && userDoc().role == 'professor'
+                    && userDoc().isBlocked == false;
+
+      // Admins update any field (void / restore / annotate)
+      allow update: if request.auth != null && userDoc().role == 'admin';
+    }
+
+    match /allowedEmails/{key} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null && userDoc().role == 'admin';
+    }
+
+    match /auditLogs/{logId} {
+      allow read:  if request.auth != null && userDoc().role == 'admin';
+      allow write: if request.auth != null;
+    }
+
+    match /qrRooms/{roomId} {
+      // Any authenticated user can read (professors need it for nothing currently,
+      // but keeping it open means future features can use it freely)
+      allow read:  if request.auth != null;
+      // Only admins can create, update, or delete QR room records
+      allow write: if request.auth != null && userDoc().role == 'admin';
+    }
+
+    match /activeRooms/{roomId} {
+      // Any authenticated user can read — needed for occupancy check
+      allow read: if request.auth != null;
+
+      // Only the professor whose UID matches can claim a room
+      allow create: if request.auth != null
+                    && request.resource.data.professorUid == request.auth.uid;
+
+      // Only the occupying professor or an admin can free a room
+      allow delete: if request.auth != null
+                    && (resource.data.professorUid == request.auth.uid
+                        || userDoc().role == 'admin');
+    }
+  }
+}

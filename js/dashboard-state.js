@@ -10,6 +10,7 @@ let filteredLogs   = [];
 let allProfessors  = [];
 let allWhitelist   = [];        // allowedEmails collection entries
 let allAuditLogs   = [];        // auditLogs collection entries
+let allActiveRooms = [];        // activeRooms collection — live onSnapshot
 let currentFilter  = "all";
 let currentPage    = 1;
 const PAGE_SIZE    = 15;
@@ -27,6 +28,7 @@ auth.onAuthStateChanged(async (user) => {
     currentUser = user;
     populateAdminUI(user);
     await refreshData();
+    subscribeActiveRooms();
     document.getElementById("authGuard").style.opacity = "0";
     setTimeout(() => document.getElementById("authGuard").style.display = "none", 300);
   } catch(e) { console.error(e); window.location.href = "index.html"; }
@@ -40,7 +42,8 @@ function populateAdminUI(user) {
 
 // ── Sign Out ────────────────────────────────────────────────────────────────
 async function handleSignOut() {
-  if (_auditUnsubscribe) { _auditUnsubscribe(); _auditUnsubscribe = null; }
+  if (_auditUnsubscribe)       { _auditUnsubscribe();       _auditUnsubscribe = null; }
+  if (_activeRoomsUnsub)       { _activeRoomsUnsub();       _activeRoomsUnsub = null; }
   await auth.signOut();
   window.location.href = "index.html";
 }
@@ -96,4 +99,15 @@ async function refreshData() {
 
 function setTopbarLoading(on) {
   document.getElementById("topbarSpinner").classList.toggle("hidden", !on);
+}
+
+// ── Active Rooms — real-time subscription ────────────────────────────────
+let _activeRoomsUnsub = null;
+function subscribeActiveRooms() {
+  if (_activeRoomsUnsub) return;
+  _activeRoomsUnsub = db.collection("activeRooms")
+    .onSnapshot(snap => {
+      allActiveRooms = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderActiveRooms();
+    }, err => console.error("activeRooms snapshot error:", err));
 }
