@@ -1,4 +1,4 @@
-    * { font-family: 'Nunito Sans', sans-serif; }
+* { font-family: 'Nunito Sans', sans-serif; }
     h1, h2, h3, .font-display { font-family: 'Outfit', sans-serif; }
 
     html { background-color: #060F1E; }
@@ -126,3 +126,27 @@
 
     /* Camera placeholder */
     #cameraPlaceholder { transition: all 0.3s; }
+
+    /* Bottom nav */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: rgba(11,30,61,0.95);
+      backdrop-filter: blur(24px);
+      border-top: 1px solid rgba(255,255,255,0.07);
+      z-index: 40;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .nav-tab {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 3px; padding: 10px 16px;
+      color: rgba(255,255,255,0.35);
+      font-size: 10px; font-weight: 700;
+      font-family: 'Outfit', sans-serif;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      cursor: pointer; transition: color 0.18s;
+      text-decoration: none; flex: 1;
+      background: none; border: none;
+    }
+    .nav-tab:hover { color: rgba(255,255,255,0.65); }
+    .nav-tab.active { color: #E8BC30; }
+    .nav-tab svg { width: 20px; height: 20px; }

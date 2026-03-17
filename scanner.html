@@ -110,7 +110,7 @@
   </nav>
 
   <!-- ── MAIN CONTENT ───────────────────────────────────────── -->
-  <main class="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+  <main class="max-w-4xl mx-auto px-4 sm:px-6 py-8 pb-24">
 
     <!-- Page header -->
     <div class="mb-6">
@@ -263,6 +263,30 @@
       </div>
     </div>
   </main>
+
+  <!-- ══════════════════ BOTTOM NAV ══════════════════ -->
+  <nav class="bottom-nav">
+    <div class="max-w-lg mx-auto flex">
+      <a href="scanner.html" class="nav-tab active">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 3.5V16M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6z"/>
+        </svg>
+        Scan
+      </a>
+      <a href="professor-dashboard.html" class="nav-tab">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+        </svg>
+        Sessions
+      </a>
+      <button onclick="document.getElementById('signOutBtn').click()" class="nav-tab">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+        </svg>
+        Sign Out
+      </button>
+    </div>
+  </nav>
 
   <script src="js/firebase-config.js"></script>
   <script src="js/scanner.js"></script>
