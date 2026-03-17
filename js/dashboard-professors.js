@@ -275,3 +275,4 @@ async function promoteToAdmin(uid, email) {
     showToast("error", "Failed to promote user. Please try again.");
   }
 }
+
