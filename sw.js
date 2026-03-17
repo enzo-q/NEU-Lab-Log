@@ -6,7 +6,7 @@
  * Local HTML/JS files are cached for offline access to the shell UI.
  */
 
-const CACHE_NAME = "neu-lab-log-v18";
+const CACHE_NAME = "neu-lab-log-v19";
 const SHELL_URLS = [
   "/index.html",
   "/scanner.html",
