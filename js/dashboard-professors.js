@@ -14,12 +14,17 @@ function keyToEmail(key)   { return key.replace(/_/g, "."); }
 async function loadProfessorsTab() {
   document.getElementById("professorsSpinner").classList.remove("hidden");
   try {
-    const [wlSnap, usersSnap] = await Promise.all([
+    const [wlSnap, profSnap, adminSnap] = await Promise.all([
       db.collection("allowedEmails").get(),
       db.collection("users").where("role","==","professor").get(),
+      db.collection("users").where("role","==","admin").get(),
     ]);
     allWhitelist  = wlSnap.docs.map(d => ({ key: d.id, ...d.data() }));
-    allProfessors = usersSnap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    // Combine professors and admins — so promoted users still appear in the table
+    allProfessors = [
+      ...profSnap.docs.map(d => ({ uid: d.id, ...d.data() })),
+      ...adminSnap.docs.map(d => ({ uid: d.id, ...d.data() })),
+    ];
     updateProfessorsCountBadge();
     renderProfessorsTable();
   } catch(e) {
@@ -46,6 +51,7 @@ function renderProfessorsTable() {
       uid:         prof?.uid         || null,
       displayName: prof?.displayName || null,
       isBlocked:   prof?.isBlocked   === true,
+      isAdmin:     prof?.role        === "admin",
       hasSignedIn: !!prof,
     };
   });
@@ -90,11 +96,14 @@ function renderProfessorsTable() {
             : 'bg-amber-500/12 hover:bg-amber-500/22 text-amber-400/80 hover:text-amber-300 border border-amber-500/25'}">
         ${p.isBlocked ? "Unblock" : "Block"}
       </button>
-      <button onclick="promoteToAdmin('${p.uid}', '${p.email}')"
-        class="px-2.5 py-1.5 rounded-lg text-xs font-bold font-display transition-all whitespace-nowrap bg-blue-500/10 hover:bg-blue-500/20 text-blue-300/70 hover:text-blue-300 border border-blue-500/20"
-        title="Grant this professor admin access">
-        Make Admin
-      </button>` :
+      ${p.isAdmin
+        ? `<span class="badge badge-blue" title="Already an admin">Admin</span>`
+        : `<button onclick="promoteToAdmin('${p.uid}', '${p.email}')"
+            class="px-2.5 py-1.5 rounded-lg text-xs font-bold font-display transition-all whitespace-nowrap bg-blue-500/10 hover:bg-blue-500/20 text-blue-300/70 hover:text-blue-300 border border-blue-500/20"
+            title="Grant this professor admin access">
+            Make Admin
+          </button>`
+      }` :
       `<span class="text-white/20 text-[10px] italic px-1">not signed in</span>`;
 
     return `

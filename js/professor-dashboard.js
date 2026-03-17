@@ -14,17 +14,16 @@ auth.onAuthStateChanged(async (user) => {
   try {
     const doc  = await db.collection("users").doc(user.uid).get();
     const data = doc.exists ? doc.data() : null;
-    const isProfessor   = data?.role === "professor";
-    const isAdminAsProf = data?.role === "admin" && data?.viewAs === "professor";
+    const allowed = data?.role === "professor" || data?.role === "admin";
 
-    if (!data || (!isProfessor && !isAdminAsProf) || data.isBlocked === true) {
+    if (!data || !allowed || data.isBlocked === true) {
       await auth.signOut();
       window.location.href = "index.html";
       return;
     }
     currentUser = user;
-    // Show "Switch to Admin" button for admins in professor mode
-    if (data.isAdmin === true || data.role === "admin") {
+    // Show "Switch to Admin" button for admins visiting the professor panel
+    if (data.role === "admin") {
       const btn = document.getElementById("switchAdminBtn");
       if (btn) btn.classList.remove("hidden");
       const btnBottom = document.getElementById("switchAdminBtnBottom");
@@ -85,7 +84,7 @@ async function handleSignOut() {
 
 // ── Switch back to Admin ──────────────────────────────────────────────────────
 async function switchToAdmin() {
-  // Auto-checkout active session first so the room is freed
+  // Auto-checkout active session so the room is freed before leaving
   if (activeSession) {
     try {
       await db.collection("logs").doc(activeSession.id).update({
@@ -100,24 +99,7 @@ async function switchToAdmin() {
       }).catch(() => {});
     } catch(_) {}
   }
-  try {
-    // Clear viewAs — role was never changed, no circular-read issue.
-    await db.collection("users").doc(currentUser.uid).update({
-      viewAs: firebase.firestore.FieldValue.delete(),
-    });
-    await db.collection("auditLogs").add({
-      action:     "role_switch",
-      adminEmail: currentUser.email,
-      adminUid:   currentUser.uid,
-      fromRole:   "professor",
-      toRole:     "admin",
-      timestamp:  firebase.firestore.FieldValue.serverTimestamp(),
-    });
-    window.location.href = "dashboard.html";
-  } catch(e) {
-    console.error("switchToAdmin error:", e);
-    alert("Could not switch role. Please try again.");
-  }
+  window.location.href = "dashboard.html";
 }
 
 

@@ -49,33 +49,10 @@ async function handleSignOut() {
 }
 
 // ── Role Switching ────────────────────────────────────────────────────────
-async function switchToProf() {
-  if (!confirm("Switch to Professor mode?\n\nYou'll be taken to the scanner. Your admin role stays intact — switch back any time from the professor panel.")) return;
-  try {
-    // Set viewAs: 'professor' — does NOT change the role field.
-    // This avoids the circular-read issue in Firestore security rules
-    // (writing your own doc while a rule reads that same doc).
-    // isAdmin: true is set as a permanent marker so the scanner knows
-    // this user is really an admin and can show the "Switch to Admin" button.
-    await db.collection("users").doc(currentUser.uid).update({
-      viewAs:  "professor",
-      isAdmin: true,
-    });
-
-    await db.collection("auditLogs").add({
-      action:     "role_switch",
-      adminEmail: currentUser.email,
-      adminUid:   currentUser.uid,
-      fromRole:   "admin",
-      toRole:     "professor",
-      timestamp:  firebase.firestore.FieldValue.serverTimestamp(),
-    });
-
-    window.location.href = "scanner.html";
-  } catch(e) {
-    console.error("switchToProf error:", e);
-    showToast("error", "Could not switch role. Please try again.");
-  }
+function switchToProf() {
+  // No Firestore write needed — role stays 'admin'.
+  // scanner.html and professor-dashboard.html both accept role == 'admin'.
+  window.location.href = "scanner.html";
 }
 
 // ── Tab Switching ────────────────────────────────────────────────────────────

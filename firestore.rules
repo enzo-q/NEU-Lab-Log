@@ -6,57 +6,49 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
+    // True for any user who can act as a professor (professor or admin)
+    function canActAsProfessor() {
+      return userDoc().role == 'professor' || userDoc().role == 'admin';
+    }
+
     match /users/{userId} {
-      // Any user reads their own doc
-      allow read: if request.auth != null && request.auth.uid == userId;
-      // Admins read all user docs
-      allow read: if request.auth != null && userDoc().role == 'admin';
+      allow read:   if request.auth != null && request.auth.uid == userId;
+      allow read:   if request.auth != null && userDoc().role == 'admin';
 
-      // Admins write OTHER users' docs (block, unblock, promote, etc.)
-      // userId != auth.uid means userDoc() reads a DIFFERENT doc — no circular read.
-      allow write: if request.auth != null
-                   && request.auth.uid != userId
-                   && userDoc().role == 'admin';
+      // Admins write OTHER users' docs — userId != auth.uid avoids circular read
+      allow write:  if request.auth != null
+                    && request.auth.uid != userId
+                    && userDoc().role == 'admin';
 
-      // A new professor creates their own doc on first sign-in
+      // New professor creates their own doc on first sign-in
       allow create: if request.auth != null
                     && request.auth.uid == userId
                     && request.resource.data.role == 'professor'
                     && request.resource.data.isBlocked == false;
-
-      // An admin updates their OWN doc for role-switching (viewAs field).
-      // Does NOT call userDoc() — avoids circular read on the same document.
-      // Only allows touching viewAs, role, isAdmin — nothing sensitive.
-      allow update: if request.auth != null
-                    && request.auth.uid == userId
-                    && request.resource.data.diff(resource.data)
-                         .affectedKeys().hasOnly(['viewAs', 'role', 'isAdmin']);
     }
 
     match /logs/{logId} {
-      // Professors (or admins acting as professor) read their own logs
+      // Professors and admins can read their own logs
       allow read: if request.auth != null
                   && resource.data.professorUid == request.auth.uid;
-      // Admins read all logs
       allow read: if request.auth != null && userDoc().role == 'admin';
 
-      // Professor creates a check-in log.
-      // Also allows admin acting as professor (role='admin', viewAs='professor').
-      // SERVER-SIDE: room must not be occupied.
+      // Professors AND admins can create check-in logs.
+      // Room must not already be occupied.
       allow create: if request.auth != null
                     && request.resource.data.professorUid == request.auth.uid
-                    && (userDoc().role == 'professor' || (userDoc().role == 'admin' && userDoc().viewAs == 'professor'))
+                    && canActAsProfessor()
                     && userDoc().isBlocked == false
                     && !exists(/databases/$(database)/documents/activeRooms/$(request.resource.data.roomNumber));
 
-      // Professor updates only logoutAt on their own log
+      // Professors AND admins can stamp logoutAt on their own log
       allow update: if request.auth != null
                     && resource.data.professorUid == request.auth.uid
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['logoutAt'])
-                    && (userDoc().role == 'professor' || (userDoc().role == 'admin' && userDoc().viewAs == 'professor'))
+                    && canActAsProfessor()
                     && userDoc().isBlocked == false;
 
-      // Admins update any field (void / restore)
+      // Admins can update any field (void / restore)
       allow update: if request.auth != null && userDoc().role == 'admin';
     }
 
@@ -78,11 +70,11 @@ service cloud.firestore {
     match /activeRooms/{roomId} {
       allow read: if request.auth != null;
 
-      // Professor (or admin acting as professor) can claim a room
+      // Professors and admins can claim a room
       allow create: if request.auth != null
                     && request.resource.data.professorUid == request.auth.uid;
 
-      // Occupying user or admin can free a room
+      // The occupant or any admin can free a room
       allow delete: if request.auth != null
                     && (resource.data.professorUid == request.auth.uid
                         || userDoc().role == 'admin');
