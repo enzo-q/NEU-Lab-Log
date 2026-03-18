@@ -16,11 +16,14 @@
       min-width: 240px;
       display: flex;
       flex-direction: column;
-      height: 100vh;
-      height: 100dvh; /* dynamic viewport height — accounts for mobile browser chrome */
-      position: fixed; left: 0; top: 0;
+      /* Use min-height so sidebar always fills to bottom even as browser
+         chrome collapses on scroll. Never cap with a fixed height. */
+      min-height: 100vh;
+      min-height: 100dvh;
+      position: fixed; left: 0; top: 0; bottom: 0;
       z-index: 30;
-      overflow-y: auto;  /* scroll if content taller than viewport */
+      overflow-y: auto;
+      padding-bottom: env(safe-area-inset-bottom);
       transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
     }
     @media (max-width: 1023px) {
