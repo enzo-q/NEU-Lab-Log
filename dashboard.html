@@ -375,34 +375,10 @@
         <div id="professorsSpinner" class="spinner hidden"></div>
       </div>
 
-      <!-- Add single email -->
+      <!-- Add emails -->
       <div class="glass-card rounded-2xl p-5 mb-4">
-        <p class="font-display font-semibold text-white/80 text-sm mb-3">Add Professor Email</p>
-        <div class="flex gap-2 flex-wrap">
-          <div class="relative flex-1 min-w-[220px]">
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-            </svg>
-            <input type="email" id="whitelistEmailInput"
-              placeholder="professor@neu.edu.ph"
-              class="date-input pl-9 w-full"
-              onkeydown="if(event.key==='Enter') addToWhitelist()" />
-          </div>
-          <button onclick="addToWhitelist()"
-            class="px-4 py-2 rounded-lg bg-gold-500/20 hover:bg-gold-500/30 text-gold-400 border border-gold-500/30 text-sm font-bold font-display transition-all flex items-center gap-2">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-            </svg>
-            Add Email
-          </button>
-        </div>
-        <p class="text-white/25 text-xs mt-2.5 leading-relaxed">The professor can sign in immediately after being added — no further steps needed.</p>
-      </div>
-
-      <!-- Bulk add -->
-      <div class="glass-card rounded-2xl p-5 mb-4">
-        <p class="font-display font-semibold text-white/80 text-sm mb-1">Bulk Add</p>
-        <p class="text-white/30 text-xs mb-3">Paste multiple emails separated by commas or new lines.</p>
+        <p class="font-display font-semibold text-white/80 text-sm mb-1">Add Professor Emails</p>
+        <p class="text-white/30 text-xs mb-3">Paste one or more emails separated by commas or new lines.</p>
         <textarea id="bulkEmailInput" rows="3"
           placeholder="prof1@neu.edu.ph, prof2@neu.edu.ph&#10;prof3@neu.edu.ph"
           class="date-input w-full resize-none leading-relaxed"

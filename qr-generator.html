@@ -245,28 +245,6 @@
     <div class="no-print glass-card rounded-2xl p-6 mb-6">
       <p class="font-display font-semibold text-white/80 text-sm mb-4">Add Rooms</p>
 
-      <!-- Single room input -->
-      <div class="flex gap-2 mb-4 flex-wrap">
-        <input type="text" id="singleRoomInput"
-          placeholder="e.g. M101"
-          class="input-field flex-1 min-w-[200px]"
-          onkeydown="if(event.key==='Enter') addSingleRoom()"
-        />
-        <button onclick="addSingleRoom()" class="btn-primary flex items-center gap-2">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-          </svg>
-          Add Room
-        </button>
-      </div>
-
-      <!-- Divider -->
-      <div class="flex items-center gap-3 my-4">
-        <div class="flex-1 h-px bg-white/08"></div>
-        <span class="text-white/25 text-xs">or add multiple at once</span>
-        <div class="flex-1 h-px bg-white/08"></div>
-      </div>
-
       <!-- Bulk input -->
       <div class="space-y-3">
         <textarea id="bulkRoomInput" rows="4"
@@ -275,7 +253,7 @@
           style="height:100px;"
         ></textarea>
         <div class="flex items-center justify-between flex-wrap gap-2">
-          <p class="text-white/25 text-xs">One room per line. Names are used exactly as typed — they must match what professors will scan.</p>
+          <p class="text-white/25 text-xs">One room per line, or multiple. Names are used exactly as typed — they must match what professors will scan.</p>
           <button onclick="addBulkRooms()" class="btn-ghost flex items-center gap-2">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h7"/>
@@ -349,29 +327,6 @@
       } catch(e) {
         console.error("loadRooms error:", e);
         showToast("error", "Failed to load saved rooms.");
-      }
-    }
-
-    // ── Add single room ───────────────────────────────────────────────────────
-    async function addSingleRoom() {
-      const input = document.getElementById("singleRoomInput");
-      const name  = input.value.trim();
-      if (!name) { showToast("warning", "Please enter a room name."); return; }
-      const existing = await db.collection(QR_COLLECTION).doc(name).get();
-      if (existing.exists) { showToast("warning", `"${name}" already exists.`); return; }
-      try {
-        await db.collection(QR_COLLECTION).doc(name).set({
-          roomName:  name,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          createdBy: currentAdmin.email,
-        });
-        input.value = "";
-        addCardToGrid(name);
-        updateGridVisibility();
-        showToast("success", `"${name}" added.`);
-      } catch(e) {
-        console.error(e);
-        showToast("error", "Failed to save room. Please try again.");
       }
     }
 

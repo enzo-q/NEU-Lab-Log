@@ -142,29 +142,6 @@ function renderProfessorsTable() {
   }).join("");
 }
 
-// ── Add single email ──────────────────────────────────────────────────────
-async function addToWhitelist() {
-  const input = document.getElementById("whitelistEmailInput");
-  const email = input.value.trim().toLowerCase();
-  if (!email) { showToast("warning", "Please enter an email address."); return; }
-  if (!email.endsWith(ALLOWED_DOMAIN)) { showToast("error", `Only ${ALLOWED_DOMAIN} emails can be added.`); return; }
-  const key = emailToKey(email);
-  if (allWhitelist.some(w => w.key === key)) { showToast("warning", "This email is already on the whitelist."); return; }
-  try {
-    const entry = { email, addedBy: currentUser.email, addedAt: firebase.firestore.FieldValue.serverTimestamp() };
-    await db.collection("allowedEmails").doc(key).set(entry);
-    allWhitelist.unshift({ key, ...entry, addedAt: { toDate: () => new Date() } });
-    renderProfessorsTable();
-    updateProfessorsCountBadge();
-    input.value = "";
-    showToast("success", `${email} added to whitelist.`);
-    writeAudit("wl_add", { targetEmail: email });
-  } catch(e) {
-    console.error("Add whitelist error:", e);
-    showToast("error", "Failed to add email. Please try again.");
-  }
-}
-
 // ── Bulk add ──────────────────────────────────────────────────────────────
 async function bulkAddToWhitelist() {
   const raw    = document.getElementById("bulkEmailInput").value;
