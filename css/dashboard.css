@@ -4,6 +4,9 @@
     /* ── Layout ──────────────────────────────────────── */
     html, body { height: 100%; }
     body { background: #060F1E; display: flex; overflow: hidden; }
+    @media (max-width: 1023px) {
+      body { overflow: auto; display: block; }
+    }
 
     /* ── Sidebar ─────────────────────────────────────── */
     .sidebar {
@@ -38,14 +41,24 @@
     .main-content {
       margin-left: 240px;
       flex: 1; min-width: 0;
-      height: 100vh; overflow-y: auto;
+      height: 100vh;
+      height: 100dvh;
+      overflow-y: auto;
       background: #060F1E;
       background-image:
         radial-gradient(ellipse 800px 500px at 60% 0%, rgba(27,79,158,0.1) 0%, transparent 60%),
         radial-gradient(circle at 1px 1px, rgba(255,255,255,0.025) 1px, transparent 0);
       background-size: 100% 100%, 30px 30px;
     }
-    @media (max-width: 1023px) { .main-content { margin-left: 0; } }
+    @media (max-width: 1023px) {
+      .main-content {
+        margin-left: 0;
+        height: auto;
+        min-height: 100dvh;
+        overflow-y: visible;
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+    }
 
     /* ── Nav items ────────────────────────────────────── */
     .nav-item {
