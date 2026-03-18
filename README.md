@@ -99,30 +99,39 @@ The professor panel works as a PWA — it can be installed on your phone like a 
 ## File Structure
 
 ```
-├── index.html                  ← Login page
-├── scanner.html                ← Professor scanner
-├── professor-dashboard.html    ← Professor session view
-├── dashboard.html              ← Admin dashboard
-├── qr-generator.html           ← Admin QR code generator
-├── firestore.rules             ← Database security rules
-├── firebase.json               ← Hosting + rules config
-├── deploy.sh                   ← Deploy script
-│
+├── .firebase/
+│   └── hosting.cache
 ├── css/
 │   ├── dashboard.css
-│   ├── scanner.css
-│   └── professor-dashboard.css
-│
-└── js/
-    ├── firebase-config.js
-    ├── scanner.js
-    ├── professor-dashboard.js
-    ├── dashboard-state.js
-    ├── dashboard-overview.js
-    ├── dashboard-logs.js
-    ├── dashboard-professors.js
-    ├── dashboard-audit.js
-    └── dashboard-utils.js
+│   ├── professor-dashboard.css
+│   └── scanner.css
+├── icons/
+│   ├── icon-192.png
+│   └── icon-512.png
+├── js/
+│   ├── dashboard-audit.js
+│   ├── dashboard-logs.js
+│   ├── dashboard-overview.js
+│   ├── dashboard-professors.js
+│   ├── dashboard-state.js
+│   ├── dashboard-utils.js
+│   ├── firebase-config.js
+│   ├── professor-dashboard.js
+│   └── scanner.js
+├── .firebaserc
+├── .gitignore
+├── dashboard.html
+├── deploy.sh
+├── firebase.json
+├── firestore.rules
+├── index.html
+├── manifest.json
+├── neu.png
+├── professor-dashboard.html
+├── qr-generator.html
+├── README.md
+├── scanner.html
+└── sw.js
 ```
 
 ---
