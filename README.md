@@ -50,42 +50,6 @@ A web app for tracking professor room usage at New Era University. Professors sc
 
 ---
 
-## Setting Up (Developers)
-
-### Prerequisites
-- [Node.js](https://nodejs.org) (LTS version)
-- A Firebase project with Firestore and Google Auth enabled
-
-### Steps
-
-**1. Configure Firebase**
-
-Edit `js/firebase-config.js` with your project credentials from the [Firebase Console](https://console.firebase.google.com).
-
-**2. Deploy**
-
-```bash
-bash deploy.sh
-```
-
-This deploys the hosting files and Firestore security rules in one step.
-
-**3. Create the first Admin account**
-
-Because no admin exists yet, the first one is set up manually:
-
-1. Open the app and sign in with your `@neu.edu.ph` Google account
-2. Go to **Firebase Console → Firestore → `users` collection**
-3. Find your document (the document ID is your Firebase Auth UID) and set:
-   - `role` → `"admin"`
-   - `isAdmin` → `true`
-   - `isBlocked` → `false`
-4. Reload the app — you'll land on the admin dashboard
-
-After this, all future admins can be promoted from the **Professor Access** tab — no more manual Firestore edits.
-
----
-
 ## Installing the App (Professors)
 
 The professor panel works as a PWA — it can be installed on your phone like a regular app.
@@ -93,46 +57,6 @@ The professor panel works as a PWA — it can be installed on your phone like a 
 **Android:** Open the site in Chrome → tap the three-dot menu → **Add to Home Screen**
 
 **iPhone:** Open the site in Safari → tap the Share button → **Add to Home Screen**
-
----
-
-## File Structure
-
-```
-├── .firebase/
-│   └── hosting.cache
-├── css/
-│   ├── dashboard.css
-│   ├── professor-dashboard.css
-│   └── scanner.css
-├── icons/
-│   ├── icon-192.png
-│   └── icon-512.png
-├── js/
-│   ├── dashboard-audit.js
-│   ├── dashboard-logs.js
-│   ├── dashboard-overview.js
-│   ├── dashboard-professors.js
-│   ├── dashboard-state.js
-│   ├── dashboard-utils.js
-│   ├── firebase-config.js
-│   ├── professor-dashboard.js
-│   └── scanner.js
-├── .firebaserc
-├── .gitignore
-├── dashboard.html
-├── deploy.sh
-├── firebase.json
-├── firestore.rules
-├── index.html
-├── manifest.json
-├── neu.png
-├── professor-dashboard.html
-├── qr-generator.html
-├── README.md
-├── scanner.html
-└── sw.js
-```
 
 ---
 
