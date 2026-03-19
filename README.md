@@ -56,7 +56,7 @@ The professor panel works as a PWA — it can be installed on your phone like a 
 
 **Android:** Open the site in Chrome → tap the three-dot menu → **Add to Home Screen**
 
-**iPhone:** Open the site in Safari → tap the Share button → **Add to Home Screen**
+**iOS:** Open the site in Safari → tap the Share button → **Add to Home Screen**
 
 ---
 
