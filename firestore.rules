@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // True for any user who can act as a professor (professor or admin)
+    function canActAsProfessor() {
+      return userDoc().role == 'professor' || userDoc().role == 'admin';
+    }
+
+    match /users/{userId} {
+      allow read:   if request.auth != null && request.auth.uid == userId;
+      allow read:   if request.auth != null && userDoc().role == 'admin';
+
+      // Admins write OTHER users' docs — userId != auth.uid avoids circular read
+      allow write:  if request.auth != null
+                    && request.auth.uid != userId
+                    && userDoc().role == 'admin';
+
+      // New professor creates their own doc on first sign-in
+      allow create: if request.auth != null
+                    && request.auth.uid == userId
+                    && request.resource.data.role == 'professor'
+                    && request.resource.data.isBlocked == false;
+    }
+
+    match /logs/{logId} {
+      // Professors and admins can read their own logs
+      allow read: if request.auth != null
+                  && resource.data.professorUid == request.auth.uid;
+      allow read: if request.auth != null && userDoc().role == 'admin';
+
+      // Professors AND admins can create check-in logs.
+      // Room must not already be occupied.
+      allow create: if request.auth != null
+                    && request.resource.data.professorUid == request.auth.uid
+                    && canActAsProfessor()
+                    && userDoc().isBlocked == false
+                    && !exists(/databases/$(database)/documents/activeRooms/$(request.resource.data.roomNumber));
+
+      // Professors AND admins can stamp logoutAt on their own log
+      allow update: if request.auth != null
+                    && resource.data.professorUid == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['logoutAt'])
+                    && canActAsProfessor()
+                    && userDoc().isBlocked == false;
+
+      // Admins can update any field (void / restore)
+      allow update: if request.auth != null && userDoc().role == 'admin';
+    }
+
+    match /allowedEmails/{key} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null && userDoc().role == 'admin';
+    }
+
+    match /auditLogs/{logId} {
+      allow read:  if request.auth != null && userDoc().role == 'admin';
+      allow write: if request.auth != null;
+    }
+
+    match /qrRooms/{roomId} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null && userDoc().role == 'admin';
+    }
+
+    match /activeRooms/{roomId} {
+      allow read: if request.auth != null;
+
+      // Professors and admins can claim a room
+      allow create: if request.auth != null
+                    && request.resource.data.professorUid == request.auth.uid;
+
+      // The occupant or any admin can free a room
+      allow delete: if request.auth != null
+                    && (resource.data.professorUid == request.auth.uid
+                        || userDoc().role == 'admin');
+    }
+  }
+}
